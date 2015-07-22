@@ -1,8 +1,53 @@
+TODO: Work In Progress
+
 # QGroundControl
 
 ## Video Streaming
 
-For supported platforms, QGroundControl implements an UDP RTP video streaming receiver in its Main Flight Display. It used gstreamer and a stripped down version of QtGstreamer.
-To build video streaming support, you will need to install the GStreamer development packages.
+For supported platforms, QGroundControl implements an UDP RTP video streaming receiver in its Main Flight Display. It uses gstreamer and a stripped down version of QtGstreamer.
+To build video streaming support, you will need to install the GStreamer development packages for the desired target platform.
 
-TODO: Complete this once the PR is through.
+For the time being, the pipeline is somewhat hardcoded, using h.264. It's best to use a camera capable of hardware encoding h.264, such as the Logitech C920. On the sender end, you would run something like this:
+
+```
+gst-launch-1.0 uvch264src initial-bitrate=1000000 average-bitrate=1000000 iframe-period=1000 device=/dev/video0 name=src auto-start=true src.vidsrc ! video/x-h264,width=1920,height=1080,framerate=24/1 ! h264parse ! rtph264pay ! udpsink host=xxx.xxx.xxx.xxx port=5000
+```
+
+Where xxx.xxx.xxx.xxx is the IP address where QGC is running. You may tweak the bitrate, the resolution and the FPS based on your needs and/or available bandwidth.
+
+### Mac OS
+
+Download the gstreamer framework from here: http://gstreamer.freedesktop.org/data/pkg/osx. The current version, as I write this is 1.5.2, which is the one currently used by QGC.
+
+The installer places the framework under /Library/Frameworks, which is where the QGC build system will look for it. That's all that is needed. When you build QGC and it finds the gstreamer framework, it automatically builds video streaming support.
+
+TIP: To run gstreamer commands from the command line, you can add the path (to your ~/.profile or ~/.bashrc) to find them:
+```
+export PATH=$PATH:/Library/Frameworks/GStreamer.framework/Commands
+```
+
+That would allow you to test the stream from the command line using a command like:
+```
+gst-launch-1.0 udpsrc port=5000 caps='application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264' ! rtph264depay ! avdec_h264 ! autovideosink fps-update-interval=1000 sync=false
+```
+
+### Linux
+
+TODO: Use apt-get to install gstreamer 1.0 dev/runtime/plugins
+(tested and working)
+
+### iOS
+
+TODO: Binaries found in http://gstreamer.freedesktop.org/data/pkg/ios
+(work in progress)
+
+### Android
+
+TODO: Binaries found in http://gstreamer.freedesktop.org/data/pkg/android
+(Not sarted)
+
+### Windows
+
+TODO: Binaries found in http://gstreamer.freedesktop.org/data/pkg/windows
+(work in progress)
+
