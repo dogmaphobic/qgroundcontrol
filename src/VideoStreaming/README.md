@@ -38,7 +38,7 @@ Download the gstreamer framework from here: http://gstreamer.freedesktop.org/dat
 
 The installer places the framework under /Library/Frameworks, which is where the QGC build system will look for it. That's all that is needed. When you build QGC and it finds the gstreamer framework, it automatically builds video streaming support.
 
-TIP: To run gstreamer commands from the command line, you can add the path (to your ~/.profile or ~/.bashrc) to find them:
+:point_right: To run gstreamer commands from the command line, you can add the path to find them (either in ~/.profile or ~/.bashrc):
 ```
 export PATH=$PATH:/Library/Frameworks/GStreamer.framework/Commands
 ```
