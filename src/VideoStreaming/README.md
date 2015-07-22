@@ -1,5 +1,3 @@
-TODO: Work In Progress
-
 # QGroundControl
 
 ## Video Streaming
@@ -19,18 +17,7 @@ gst-launch-1.0 uvch264src initial-bitrate=1000000 average-bitrate=1000000 iframe
 
 Where xxx.xxx.xxx.xxx is the IP address where QGC is running. You may tweak the bitrate, the resolution and the FPS based on your needs and/or available bandwidth.
 
-### Mac OS
-
-Download the gstreamer framework from here: http://gstreamer.freedesktop.org/data/pkg/osx. The current version, as I write this is 1.5.2, which is the one currently used by QGC.
-
-The installer places the framework under /Library/Frameworks, which is where the QGC build system will look for it. That's all that is needed. When you build QGC and it finds the gstreamer framework, it automatically builds video streaming support.
-
-TIP: To run gstreamer commands from the command line, you can add the path (to your ~/.profile or ~/.bashrc) to find them:
-```
-export PATH=$PATH:/Library/Frameworks/GStreamer.framework/Commands
-```
-
-That would allow you to test the stream from the command line using a command like:
+On the receiving end, if you want to test it from the command line, you can use something like:
 ```
 gst-launch-1.0 udpsrc port=5000 caps='application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264' ! rtph264depay ! avdec_h264 ! autovideosink fps-update-interval=1000 sync=false
 ```
@@ -45,6 +32,17 @@ sudo apt-get install libgstreamer1.0*
 
 The build system is setup to use pkgconfig and it will find the necessary headers and libraries automatically.
 
+### Mac OS
+
+Download the gstreamer framework from here: http://gstreamer.freedesktop.org/data/pkg/osx. The current version, as I write this is 1.5.2, which is the one currently used by QGC.
+
+The installer places the framework under /Library/Frameworks, which is where the QGC build system will look for it. That's all that is needed. When you build QGC and it finds the gstreamer framework, it automatically builds video streaming support.
+
+TIP: To run gstreamer commands from the command line, you can add the path (to your ~/.profile or ~/.bashrc) to find them:
+```
+export PATH=$PATH:/Library/Frameworks/GStreamer.framework/Commands
+```
+
 ### iOS
 
 TODO: Binaries found in http://gstreamer.freedesktop.org/data/pkg/ios
@@ -53,7 +51,7 @@ TODO: Binaries found in http://gstreamer.freedesktop.org/data/pkg/ios
 ### Android
 
 TODO: Binaries found in http://gstreamer.freedesktop.org/data/pkg/android
-(Not sarted)
+(work in progress)
 
 ### Windows
 
