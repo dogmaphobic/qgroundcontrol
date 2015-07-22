@@ -7,6 +7,10 @@ TODO: Work In Progress
 For supported platforms, QGroundControl implements an UDP RTP video streaming receiver in its Main Flight Display. It uses gstreamer and a stripped down version of QtGstreamer.
 To build video streaming support, you will need to install the GStreamer development packages for the desired target platform.
 
+If you do have the proper gstreamer development libraries installed where QGC looks for it, the QGC build sysystem will automatically use it and build video streaming support. If you would like to disable video streaming support, you can add **DISABLE_VIDEOSTREAMING** to the **DEFINES** build variable.
+
+### Pipeline
+
 For the time being, the pipeline is somewhat hardcoded, using h.264. It's best to use a camera capable of hardware encoding h.264, such as the Logitech C920. On the sender end, you would run something like this:
 
 ```
