@@ -7,13 +7,10 @@ import QGroundControl.Controls 1.0
 import QGroundControl.Controllers 1.0
 import QGroundControl.Palette 1.0
 
-FactPanel {
-    id:                 panel
+Item {
     anchors.fill:       parent
-    color:              qgcPal.windowShadeDark
 
-    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
-    AirframeComponentController { id: controller; factPanel: panel }
+    AirframeComponentController { id: controller; }
 
     property Fact sysIdFact:        controller.getParameterFact(-1, "MAV_SYS_ID")
     property Fact sysAutoStartFact: controller.getParameterFact(-1, "SYS_AUTOSTART")
@@ -23,21 +20,26 @@ FactPanel {
     Column {
         anchors.fill:       parent
         VehicleSummaryRow {
-            labelText: qsTr("System ID:")
+            labelText: qsTr("System ID")
             valueText: sysIdFact ? sysIdFact.valueString : ""
         }
         VehicleSummaryRow {
-            labelText: qsTr("Airframe type:")
+            labelText: qsTr("Airframe type")
             valueText: autoStartSet ? controller.currentAirframeType : qsTr("Setup required")
         }
         VehicleSummaryRow {
-            labelText: qsTr("Vehicle:")
+            labelText: qsTr("Vehicle")
             valueText: autoStartSet ? controller.currentVehicleName : qsTr("Setup required")
         }
 
         VehicleSummaryRow {
-            labelText: qsTr("Firmware Version:")
-            valueText: activeVehicle.firmwareMajorVersion == -1 ? qsTr("Unknown") : activeVehicle.firmwareMajorVersion + "." + activeVehicle.firmwareMinorVersion + "." + activeVehicle.firmwarePatchVersion + activeVehicle.firmwareVersionTypeString
+            labelText: qsTr("Firmware Version")
+            valueText: activeVehicle.firmwareMajorVersion === -1 ? qsTr("Unknown") : activeVehicle.firmwareMajorVersion + "." + activeVehicle.firmwareMinorVersion + "." + activeVehicle.firmwarePatchVersion + activeVehicle.firmwareVersionTypeString
+        }
+        VehicleSummaryRow {
+            visible: activeVehicle.firmwareCustomMajorVersion !== -1
+            labelText: qsTr("Custom Fw. Ver.")
+            valueText: activeVehicle.firmwareCustomMajorVersion + "." + activeVehicle.firmwareCustomMinorVersion + "." + activeVehicle.firmwareCustomPatchVersion
         }
     }
 }

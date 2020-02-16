@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -31,7 +31,7 @@ SetupPage {
             width:  Math.max(availableWidth, innerColumn.width)
             height: innerColumn.height
 
-            FactPanelController { id: controller; factPanel: cameraPage.viewPanel }
+            FactPanelController { id: controller; }
 
             property real _margins:         ScreenTools.defaultFontPixelHeight
             property real _editFieldWidth:  ScreenTools.defaultFontPixelWidth * 25
@@ -121,14 +121,14 @@ SetupPage {
                         }
 
                         QGCLabel {
-                            anchors.baseline:   camTrigCombo.baseline
+                            Layout.alignment:   Qt.AlignVCenter
                             text:               qsTr("Trigger mode")
                         }
                         FactComboBox {
-                            id:                 camTrigCombo
                             fact:               _camTriggerMode
                             indexModel:         false
                             enabled:            !_rebooting
+                            Layout.alignment:   Qt.AlignVCenter
                             Layout.minimumWidth: _editFieldWidth
                             onActivated: {
                                 applyAndRestart.visible = true
@@ -136,14 +136,14 @@ SetupPage {
                         }
 
                         QGCLabel {
-                            anchors.baseline:   camInterfaceCombo.baseline
+                            Layout.alignment:   Qt.AlignVCenter
                             text:               qsTr("Trigger interface")
                         }
                         FactComboBox {
-                            id:                 camInterfaceCombo
                             fact:               _camTriggerInterface
                             indexModel:         false
                             enabled:            !_rebooting && (_camTriggerInterface ? true : false)
+                            Layout.alignment:   Qt.AlignVCenter
                             Layout.minimumWidth: _editFieldWidth
                             onActivated: {
                                 applyAndRestart.visible = true
@@ -152,7 +152,7 @@ SetupPage {
 
                         QGCLabel {
                             text:               qsTr("Time Interval")
-                            anchors.baseline:   timeIntervalField.baseline
+                            Layout.alignment:   Qt.AlignVCenter
                             color:              qgcPal.text
                             visible:            timeIntervalField.visible
                         }
@@ -161,12 +161,13 @@ SetupPage {
                             fact:               controller.getParameterFact(-1, "TRIG_INTERVAL", false)
                             showUnits:          true
                             Layout.minimumWidth: _editFieldWidth
+                            Layout.alignment:   Qt.AlignVCenter
                             visible:            _camTriggerMode.value === 2
                         }
 
                         QGCLabel {
                             text:               qsTr("Distance Interval")
-                            anchors.baseline:   trigDistField.baseline
+                            Layout.alignment:   Qt.AlignVCenter
                             color:              qgcPal.text
                             visible:            trigDistField.visible
                         }
@@ -174,6 +175,7 @@ SetupPage {
                             id:                 trigDistField
                             fact:               controller.getParameterFact(-1, "TRIG_DISTANCE", false)
                             showUnits:          true
+                            Layout.alignment:   Qt.AlignVCenter
                             Layout.minimumWidth: _editFieldWidth
                             visible:            _camTriggerMode.value === 3
                         }
@@ -199,8 +201,8 @@ SetupPage {
                             }
 
                             Row {
-                                spacing:                    _margins
-                                anchors.horizontalCenter:   parent.horizontalCenter
+                                spacing:                _margins
+                                Layout.alignment:       Qt.AlignHCenter
 
                                 GridLayout {
                                     rows: 2
@@ -259,10 +261,8 @@ SetupPage {
                                 Item { height: 1; width: _margins; }
                                 Column {
                                     spacing:            _margins * 0.5
-                                    ExclusiveGroup { id: polarityGroup }
                                     QGCRadioButton {
                                         checked:        _camTriggerPol && _camTriggerPol.value === 0
-                                        exclusiveGroup: polarityGroup
                                         text:           "Low (0V)"
                                         onClicked: {
                                             if(_camTriggerPol) {
@@ -272,7 +272,6 @@ SetupPage {
                                     }
                                     QGCRadioButton {
                                         checked:        _camTriggerPol && _camTriggerPol.value > 0
-                                        exclusiveGroup: polarityGroup
                                         text:           "High (3.3V)"
                                         onClicked: {
                                             if(_camTriggerPol) {

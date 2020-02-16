@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -59,7 +59,7 @@ void MissionCommandTreeTest::_checkFullInfoMap(const MissionCommandUIInfo* uiInf
 // Verifies that values match settings for base tree
 void MissionCommandTreeTest::_checkBaseValues(const MissionCommandUIInfo* uiInfo, int command)
 {
-    QVERIFY(uiInfo != NULL);
+    QVERIFY(uiInfo != nullptr);
     _checkFullInfoMap(uiInfo);
     QCOMPARE(uiInfo->command(), (MAV_CMD)command);
     QCOMPARE(uiInfo->rawName(), _rawName(command));
@@ -70,7 +70,9 @@ void MissionCommandTreeTest::_checkBaseValues(const MissionCommandUIInfo* uiInfo
     QCOMPARE(uiInfo->isStandaloneCoordinate(), true);
     QCOMPARE(uiInfo->specifiesCoordinate(), true);
     for (int i=1; i<=7; i++) {
-        const MissionCmdParamInfo* paramInfo = uiInfo->getParamInfo(i);
+        bool showUI;
+        const MissionCmdParamInfo* paramInfo = uiInfo->getParamInfo(i, showUI);
+        QVERIFY(showUI);
         QVERIFY(paramInfo);
         QCOMPARE(paramInfo->decimalPlaces(), 1);
         QCOMPARE(paramInfo->defaultValue(), 1.0);
@@ -91,7 +93,9 @@ void MissionCommandTreeTest::_checkOverrideParamValues(const MissionCommandUIInf
 {
     QString overrideString = QString("override fw %1 %2").arg(command).arg(paramIndex);
 
-    const MissionCmdParamInfo* paramInfo = uiInfo->getParamInfo(paramIndex);
+    bool showUI;
+    const MissionCmdParamInfo* paramInfo = uiInfo->getParamInfo(paramIndex, showUI);
+    QVERIFY(showUI);
     QVERIFY(paramInfo);
     QCOMPARE(paramInfo->decimalPlaces(), 1);
     QCOMPARE(paramInfo->defaultValue(), 1.0);
@@ -109,9 +113,10 @@ void MissionCommandTreeTest::_checkOverrideParamValues(const MissionCommandUIInf
 // Verifies that values match settings for an override
 void MissionCommandTreeTest::_checkOverrideValues(const MissionCommandUIInfo* uiInfo, int command)
 {
+    bool showUI;
     QString overrideString = QString("override fw %1").arg(command);
 
-    QVERIFY(uiInfo != NULL);
+    QVERIFY(uiInfo != nullptr);
     _checkFullInfoMap(uiInfo);
     QCOMPARE(uiInfo->command(), (MAV_CMD)command);
     QCOMPARE(uiInfo->rawName(), _rawName(command));
@@ -121,9 +126,12 @@ void MissionCommandTreeTest::_checkOverrideValues(const MissionCommandUIInfo* ui
     QCOMPARE(uiInfo->friendlyName(), _friendlyName(command));
     QCOMPARE(uiInfo->isStandaloneCoordinate(), false);
     QCOMPARE(uiInfo->specifiesCoordinate(), false);
-    QVERIFY(uiInfo->getParamInfo(2) == NULL);
-    QVERIFY(uiInfo->getParamInfo(4) == NULL);
-    QVERIFY(uiInfo->getParamInfo(6) == NULL);
+    QVERIFY(uiInfo->getParamInfo(2, showUI));
+    QCOMPARE(showUI, false);
+    QVERIFY(uiInfo->getParamInfo(4, showUI));
+    QCOMPARE(showUI, false);
+    QVERIFY(uiInfo->getParamInfo(6, showUI));
+    QCOMPARE(showUI, false);
     _checkOverrideParamValues(uiInfo, command, 1);
     _checkOverrideParamValues(uiInfo, command, 3);
     _checkOverrideParamValues(uiInfo, command, 5);
@@ -131,13 +139,15 @@ void MissionCommandTreeTest::_checkOverrideValues(const MissionCommandUIInfo* ui
 
 void MissionCommandTreeTest::testJsonLoad(void)
 {
+    bool showUI;
+
     // Test loading from the bad command list
     MissionCommandList* commandList = _commandTree->_staticCommandTree[MAV_AUTOPILOT_GENERIC][MAV_TYPE_GENERIC];
-    QVERIFY(commandList != NULL);
+    QVERIFY(commandList != nullptr);
 
     // Command 1 should have all values defaulted, no params
     MissionCommandUIInfo* uiInfo = commandList->getUIInfo((MAV_CMD)1);
-    QVERIFY(uiInfo != NULL);
+    QVERIFY(uiInfo != nullptr);
     _checkFullInfoMap(uiInfo);
     QCOMPARE(uiInfo->command(), (MAV_CMD)1);
     QCOMPARE(uiInfo->rawName(), _rawName(1));
@@ -148,14 +158,16 @@ void MissionCommandTreeTest::testJsonLoad(void)
     QCOMPARE(uiInfo->isStandaloneCoordinate(), false);
     QCOMPARE(uiInfo->specifiesCoordinate(), false);
     for (int i=1; i<=7; i++) {
-        QVERIFY(uiInfo->getParamInfo(i) == NULL);
+        QVERIFY(uiInfo->getParamInfo(i, showUI) == nullptr);
+        QCOMPARE(showUI, false);
     }
 
     // Command 2 should all values defaulted for param 1
     uiInfo = commandList->getUIInfo((MAV_CMD)2);
-    QVERIFY(uiInfo != NULL);
-    const MissionCmdParamInfo* paramInfo = uiInfo->getParamInfo(1);
+    QVERIFY(uiInfo != nullptr);
+    const MissionCmdParamInfo* paramInfo = uiInfo->getParamInfo(1, showUI);
     QVERIFY(paramInfo);
+    QCOMPARE(showUI, true);
     QCOMPARE(paramInfo->decimalPlaces(), -1);
     QCOMPARE(paramInfo->defaultValue(), 0.0);
     QCOMPARE(paramInfo->enumStrings().count(), 0);
@@ -164,7 +176,8 @@ void MissionCommandTreeTest::testJsonLoad(void)
     QCOMPARE(paramInfo->param(), 1);
     QVERIFY(paramInfo->units().isEmpty());
     for (int i=2; i<=7; i++) {
-        QVERIFY(uiInfo->getParamInfo(i) == NULL);
+        QVERIFY(uiInfo->getParamInfo(i, showUI) == nullptr);
+        QCOMPARE(showUI, false);
     }
 
     // Command 3 should have all values set
@@ -193,11 +206,15 @@ void MissionCommandTreeTest::testAllTrees(void)
     vehicleList << MAV_TYPE_GENERIC << MAV_TYPE_QUADROTOR << MAV_TYPE_FIXED_WING << MAV_TYPE_GROUND_ROVER << MAV_TYPE_SUBMARINE << MAV_TYPE_VTOL_QUADROTOR;
 
     // This will cause all of the variants of collapsed trees to be built
-    foreach(MAV_AUTOPILOT firmwareType, firmwareList) {
-        foreach (MAV_TYPE vehicleType, vehicleList) {
+    for(MAV_AUTOPILOT firmwareType: firmwareList) {
+        for (MAV_TYPE vehicleType: vehicleList) {
+            if (firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA && vehicleType == MAV_TYPE_VTOL_QUADROTOR) {
+                // VTOL in ArduPilot shows up as plane so we can test this pair
+                continue;
+            }
             qDebug() << firmwareType << vehicleType;
             Vehicle* vehicle = new Vehicle(firmwareType, vehicleType, qgcApp()->toolbox()->firmwarePluginManager());
-            QVERIFY(qgcApp()->toolbox()->missionCommandTree()->getUIInfo(vehicle, MAV_CMD_NAV_WAYPOINT) != NULL);
+            QVERIFY(qgcApp()->toolbox()->missionCommandTree()->getUIInfo(vehicle, MAV_CMD_NAV_WAYPOINT) != nullptr);
             delete vehicle;
         }
     }

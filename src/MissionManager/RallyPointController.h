@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -26,17 +26,17 @@ class RallyPointController : public PlanElementController
     Q_OBJECT
     
 public:
-    RallyPointController(PlanMasterController* masterController, QObject* parent = NULL);
+    RallyPointController(PlanMasterController* masterController, QObject* parent = nullptr);
     ~RallyPointController();
     
-    Q_PROPERTY(bool                 rallyPointsSupported    READ rallyPointsSupported                               NOTIFY rallyPointsSupportedChanged)
     Q_PROPERTY(QmlObjectListModel*  points                  READ points                                             CONSTANT)
     Q_PROPERTY(QString              editorQml               READ editorQml                                          CONSTANT)
     Q_PROPERTY(QObject*             currentRallyPoint       READ currentRallyPoint      WRITE setCurrentRallyPoint  NOTIFY currentRallyPointChanged)
 
-    Q_INVOKABLE void addPoint(QGeoCoordinate point);
-    Q_INVOKABLE void removePoint(QObject* rallyPoint);
+    Q_INVOKABLE void addPoint       (QGeoCoordinate point);
+    Q_INVOKABLE void removePoint    (QObject* rallyPoint);
 
+    bool supported                  (void) const final;
     void save                       (QJsonObject& json) final;
     bool load                       (const QJsonObject& json, QString& errorString) final;
     void loadFromVehicle            (void) final;
@@ -50,20 +50,19 @@ public:
     void managerVehicleChanged      (Vehicle* managerVehicle) final;
     bool showPlanFromManagerVehicle (void) final;
 
-    bool                rallyPointsSupported    (void) const;
     QmlObjectListModel* points                  (void) { return &_points; }
     QString             editorQml               (void) const;
     QObject*            currentRallyPoint       (void) const { return _currentRallyPoint; }
 
-    void setCurrentRallyPoint(QObject* rallyPoint);
+    void setCurrentRallyPoint   (QObject* rallyPoint);
+    bool isEmpty                (void) const;
 
 signals:
-    void rallyPointsSupportedChanged(bool rallyPointsSupported);
     void currentRallyPointChanged(QObject* rallyPoint);
     void loadComplete(void);
 
 private slots:
-    void _managerLoadComplete(const QList<QGeoCoordinate> rgPoints);
+    void _managerLoadComplete(void);
     void _managerSendComplete(bool error);
     void _managerRemoveAllComplete(bool error);
     void _setFirstPointCurrent(void);
@@ -75,6 +74,8 @@ private:
     QmlObjectListModel  _points;
     QObject*            _currentRallyPoint;
     bool                _itemsRequested;
+
+    static const int _jsonCurrentVersion = 2;
 
     static const char* _jsonFileTypeValue;
     static const char* _jsonPointsKey;

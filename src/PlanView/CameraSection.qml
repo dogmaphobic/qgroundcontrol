@@ -24,6 +24,8 @@ Column {
 
     SectionHeader {
         id:             cameraSectionHeader
+        anchors.left:   parent.left
+        anchors.right:  parent.right
         text:           qsTr("Camera")
         checked:        false
     }
@@ -46,7 +48,7 @@ Column {
             anchors.left:   parent.left
             anchors.right:  parent.right
             spacing:        ScreenTools.defaultFontPixelWidth
-            visible:        _camera.cameraAction.rawValue == 1
+            visible:        _camera.cameraAction.rawValue === 1
 
             QGCLabel {
                 text:               qsTr("Time")
@@ -62,7 +64,7 @@ Column {
             anchors.left:   parent.left
             anchors.right:  parent.right
             spacing:        ScreenTools.defaultFontPixelWidth
-            visible:        _camera.cameraAction.rawValue == 2
+            visible:        _camera.cameraAction.rawValue === 2
 
             QGCLabel {
                 text:               qsTr("Distance")
@@ -71,37 +73,6 @@ Column {
             FactTextField {
                 fact:                   _camera.cameraPhotoIntervalDistance
                 Layout.preferredWidth:  _fieldWidth
-            }
-        }
-
-        GridLayout {
-            anchors.left:   parent.left
-            anchors.right:  parent.right
-            columnSpacing:  ScreenTools.defaultFontPixelWidth / 2
-            rowSpacing:     0
-            columns:        3
-
-            Item { width: 1; height: 1 }
-            QGCLabel { text: qsTr("Pitch") }
-            QGCLabel { text: qsTr("Yaw") }
-
-            QGCCheckBox {
-                id:                 gimbalCheckBox
-                text:               qsTr("Gimbal")
-                checked:            _camera.specifyGimbal
-                onClicked:          _camera.specifyGimbal = checked
-                Layout.fillWidth:   true
-            }
-            FactTextField {
-                fact:           _camera.gimbalPitch
-                implicitWidth:  ScreenTools.defaultFontPixelWidth * 9
-                enabled:        gimbalCheckBox.checked
-            }
-
-            FactTextField {
-                fact:           _camera.gimbalYaw
-                implicitWidth:  ScreenTools.defaultFontPixelWidth * 9
-                enabled:        gimbalCheckBox.checked
             }
         }
 
@@ -122,6 +93,36 @@ Column {
                 indexModel:         false
                 enabled:            modeCheckBox.checked
                 Layout.fillWidth:   true
+            }
+        }
+
+        GridLayout {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            columnSpacing:  ScreenTools.defaultFontPixelWidth / 2
+            rowSpacing:     0
+            columns:        3
+
+            QGCLabel { text: qsTr("Gimbal") }
+            QGCLabel { text: qsTr("Pitch") }
+            QGCLabel { text: qsTr("Yaw") }
+
+            QGCCheckBox {
+                id:                 gimbalCheckBox
+                checked:            _camera.specifyGimbal
+                onClicked:          _camera.specifyGimbal = checked
+                Layout.fillWidth:   true
+            }
+            FactTextField {
+                fact:           _camera.gimbalPitch
+                implicitWidth:  ScreenTools.defaultFontPixelWidth * 9
+                enabled:        gimbalCheckBox.checked
+            }
+
+            FactTextField {
+                fact:           _camera.gimbalYaw
+                implicitWidth:  ScreenTools.defaultFontPixelWidth * 9
+                enabled:        gimbalCheckBox.checked
             }
         }
     }

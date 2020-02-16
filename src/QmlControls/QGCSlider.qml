@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -21,8 +21,7 @@ Slider {
 
     // Value indicator starts display from zero instead of min value
     property bool zeroCentered: false
-
-    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
+    property bool displayValue: false
 
     style: SliderStyle {
         groove: Item {
@@ -67,8 +66,15 @@ Slider {
             implicitWidth:  _radius * 2
             implicitHeight: _radius * 2
             radius:         _radius
-
             property real _radius: Math.round(ScreenTools.defaultFontPixelHeight * 0.75)
+            Label {
+                text:               _root.value.toFixed( _root.maximumValue <= 1 ? 1 : 0)
+                visible:            _root.displayValue
+                anchors.centerIn:   parent
+                font.family:        ScreenTools.normalFontFamily
+                font.pointSize:     ScreenTools.smallFontPointSize
+                color:              qgcPal.buttonText
+            }
         }
     }
 }

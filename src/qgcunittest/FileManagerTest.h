@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *   (c) 2009-2018 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,8 +8,7 @@
  ****************************************************************************/
 
 
-#ifndef FileManagerTEST_H
-#define FileManagerTEST_H
+#pragma once
 
 #include <QObject>
 #include <QtTest/QtTest>
@@ -72,9 +71,8 @@ private:
     
     /// @brief This is the amount of time to wait to allow the FileManager enough time to timeout waiting for an Ack.
     /// As such it must be larger than the Ack Timeout used by the FileManager.
-    static const int _ackTimerTimeoutMsecs = FileManager::ackTimerTimeoutMsecs * 2;
+    static const int _ackTimerTimeoutMsecs = FileManager::ackTimerMaxRetries * FileManager::ackTimerTimeoutMsecs * 2;
     
     QStringList _fileListReceived;
 };
 
-#endif

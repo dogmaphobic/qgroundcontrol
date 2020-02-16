@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -19,24 +19,25 @@ import QGroundControl.ScreenTools           1.0
 import QGroundControl.Palette               1.0
 
 //-------------------------------------------------------------------------
-//-- GPS Indicator
+//-- Message Indicator
 Item {
     width:          height
     anchors.top:    parent.top
     anchors.bottom: parent.bottom
 
-    property var    _activeVehicle:         QGroundControl.multiVehicleManager.activeVehicle
-    property bool   _isMessageImportant:    _activeVehicle ? !_activeVehicle.messageTypeNormal && !_activeVehicle.messageTypeNone : false
+    property bool showIndicator: true
+
+    property bool _isMessageImportant:    activeVehicle ? !activeVehicle.messageTypeNormal && !activeVehicle.messageTypeNone : false
 
     function getMessageColor() {
-        if (_activeVehicle) {
-            if (_activeVehicle.messageTypeNone)
+        if (activeVehicle) {
+            if (activeVehicle.messageTypeNone)
                 return qgcPal.colorGrey
-            if (_activeVehicle.messageTypeNormal)
+            if (activeVehicle.messageTypeNormal)
                 return qgcPal.colorBlue;
-            if (_activeVehicle.messageTypeWarning)
+            if (activeVehicle.messageTypeWarning)
                 return qgcPal.colorOrange;
-            if (_activeVehicle.messageTypeError)
+            if (activeVehicle.messageTypeError)
                 return qgcPal.colorRed;
             // Cannot be so make make it obnoxious to show error
             console.log("Invalid vehicle message type")
@@ -53,7 +54,7 @@ Item {
         sourceSize.height:  height
         fillMode:           Image.PreserveAspectFit
         cache:              false
-        visible:            _activeVehicle && _activeVehicle.messageCount > 0 && _isMessageImportant
+        visible:            activeVehicle && activeVehicle.messageCount > 0 && _isMessageImportant
     }
 
     QGCColoredImage {
@@ -67,6 +68,6 @@ Item {
 
     MouseArea {
         anchors.fill:   parent
-        onClicked:      mainWindow.showMessageArea()
+        onClicked:      mainWindow.showVehicleMessages()
     }
 }

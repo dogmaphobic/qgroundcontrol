@@ -13,14 +13,10 @@ import QGroundControl.ArduPilot     1.0
     IMPORTANT NOTE: Any changes made here must also be made to SensorsComponentSummary.qml
 */
 
-FactPanel {
-    id:             panel
+Item {
     anchors.fill:   parent
-    color:          qgcPal.windowShadeDark
 
-    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
-
-    APMSensorsComponentController { id: controller; factPanel: panel }
+    APMSensorsComponentController { id: controller; }
 
     APMSensorParams {
         id:                     sensorParams
@@ -34,7 +30,7 @@ FactPanel {
             model: 3
 
             VehicleSummaryRow {
-                labelText:  qsTr("Compass ") + (index + 1) + ":"
+                labelText:  qsTr("Compass ") + (index + 1) + ""
                 valueText:  sensorParams.rgCompassAvailable[index] ?
                                 (sensorParams.rgCompassCalibrated[index] ?
                                      (sensorParams.rgCompassPrimary[index] ? "Primary" : "Secondary") +
@@ -47,7 +43,7 @@ FactPanel {
         }
 
         VehicleSummaryRow {
-            labelText: qsTr("Accelerometer(s):")
+            labelText: qsTr("Accelerometer(s)")
             valueText: controller.accelSetupNeeded ? qsTr("Setup required") : qsTr("Ready")
         }
     }

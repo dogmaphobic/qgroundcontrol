@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ *   (c) 2009-2018 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,8 +8,7 @@
  ****************************************************************************/
 
 
-#ifndef CustomCommandWidgetController_H
-#define CustomCommandWidgetController_H
+#pragma once
 
 #include <QObject>
 
@@ -32,13 +31,9 @@ public:
 signals:
     void customQmlFileChanged   (const QString& customQmlFile);
 
-private slots:
-    void _activeVehicleChanged  (Vehicle* activeVehicle);
-
 private:
     Vehicle*            _vehicle;
     QString             _customQmlFile;
     static const char*  _settingsKey;
 };
 
-#endif

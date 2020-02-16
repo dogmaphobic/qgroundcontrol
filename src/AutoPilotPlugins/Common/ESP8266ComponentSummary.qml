@@ -7,17 +7,13 @@ import QGroundControl.Controls      1.0
 import QGroundControl.Palette       1.0
 import QGroundControl.Controllers   1.0
 
-FactPanel {
-    id:             panel
+Item {
     anchors.fill:   parent
-    color:          qgcPal.windowShadeDark
 
-    QGCPalette          { id: qgcPal; colorGroupEnabled: enabled }
-    FactPanelController { id: controller; factPanel: panel }
+    FactPanelController { id: controller; }
 
     ESP8266ComponentController {
         id:         esp8266
-        factPanel:  panel
     }
 
     property Fact debugEnabled:     controller.getParameterFact(esp8266.componentID, "DEBUG_ENABLED")
@@ -30,38 +26,38 @@ FactPanel {
     Column {
         anchors.fill:       parent
         VehicleSummaryRow {
-            labelText: qsTr("Firmware Version:")
+            labelText: qsTr("Firmware Version")
             valueText: esp8266.version
         }
         VehicleSummaryRow {
-            labelText: qsTr("WiFi Mode:")
+            labelText: qsTr("WiFi Mode")
             valueText: wifiMode ? (wifiMode.value === 0 ? "AP Mode" : "Station Mode") : "AP Mode"
         }
         VehicleSummaryRow {
-            labelText:  qsTr("WiFi Channel:")
+            labelText:  qsTr("WiFi Channel")
             valueText:  wifiChannel ? wifiChannel.valueString : ""
             visible:    wifiMode ? wifiMode.value === 0 : true
         }
         VehicleSummaryRow {
-            labelText: qsTr("WiFi AP SSID:")
+            labelText: qsTr("WiFi AP SSID")
             valueText: esp8266.wifiSSID
         }
         VehicleSummaryRow {
-            labelText: qsTr("WiFi AP Password:")
+            labelText: qsTr("WiFi AP Password")
             valueText: esp8266.wifiPassword
         }
         /* Too much info makes it all crammed
         VehicleSummaryRow {
-            labelText: qsTr("WiFi STA SSID:")
+            labelText: qsTr("WiFi STA SSID")
             valueText: esp8266.wifiSSIDSta
         }
         VehicleSummaryRow {
-            labelText: qsTr("WiFi STA Password:")
+            labelText: qsTr("WiFi STA Password")
             valueText: esp8266.wifiPasswordSta
         }
         */
         VehicleSummaryRow {
-            labelText: qsTr("UART Baud Rate:")
+            labelText: qsTr("UART Baud Rate")
             valueText: uartBaud ? uartBaud.valueString : ""
         }
     }

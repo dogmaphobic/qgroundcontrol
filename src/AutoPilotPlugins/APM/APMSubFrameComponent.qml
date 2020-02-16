@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -12,6 +12,7 @@ import QtQuick              2.3
 import QtQuick.Controls     1.2
 import QtQuick.Dialogs      1.2
 
+import QGroundControl               1.0
 import QGroundControl.FactSystem    1.0
 import QGroundControl.FactControls  1.0
 import QGroundControl.Palette       1.0
@@ -22,14 +23,10 @@ import QGroundControl.Controllers   1.0
 SetupPage {
     id:                 subFramePage
     pageComponent:      subFramePageComponent
-    property var  _flatParamList:       ListModel {
-        ListElement {
-            name: "Blue Robotics BlueROV2"
-            file: "Sub/bluerov2-3_5.params"
-        }
-    }
 
-    APMAirframeComponentController { id: controller; factPanel: subFramePage.viewPanel }
+    property bool _oldFW:   activeVehicle.versionCompare(3 ,5 ,2) < 0
+
+    APMAirframeComponentController { id: controller; }
 
     Component {
         id: subFramePageComponent
@@ -106,6 +103,12 @@ SetupPage {
                     resource: "qrc:///qmlimages/Frames/SimpleROV-4.png"
                     paramValue: 5
                 }
+
+                ListElement {
+                    name: "SimpleROV-5"
+                    resource: "qrc:///qmlimages/Frames/SimpleROV-5.png"
+                    paramValue: 6
+                }
             }
 
             Item {
@@ -117,7 +120,7 @@ SetupPage {
                     id: defaultsButton
                     anchors.left: parent.left
                     text:       qsTr("Load Vehicle Default Parameters")
-                    onClicked:  showDialog(selectParamFileDialogComponent, qsTr("Load Vehicle Default Parameters"), qgcView.showDialogDefaultWidth, StandardButton.Close)
+                    onClicked:  mainWindow.showComponentDialog(selectParamFileDialogComponent, qsTr("Load Vehicle Default Parameters"), mainWindow.showDialogDefaultWidth, StandardButton.Close)
                 }
             }
 
@@ -194,19 +197,25 @@ SetupPage {
                 spacing :           _margins
                 layoutDirection:    Qt.Vertical;
 
-                Repeater {
-                    id:     airframePicker
-                    model:  _flatParamList
+                QGCButton {
+                    width:  parent.width
+                    text:   "Blue Robotics BlueROV2"
+                    property var file:   _oldFW ? "Sub/bluerov2-3_5.params" : "Sub/bluerov2-3_5_2.params"
 
-                    delegate: QGCButton {
-                        width:  parent.width / 2.1
-                        height: (ScreenTools.defaultFontPixelHeight * 14) / 5
-                        text:   name
+                    onClicked : {
+                        controller.loadParameters(file)
+                        hideDialog()
+                    }
+                }
 
-                        onClicked : {
-                            controller.loadParameters(file)
-                            hideDialog()
-                        }
+                QGCButton {
+                    width:  parent.width
+                    text:   "Blue Robotics BlueROV2 Heavy"
+                    property var file:  "Sub/bluerov2-heavy-3_5_2.params"
+
+                    onClicked : {
+                        controller.loadParameters(file)
+                        hideDialog()
                     }
                 }
             }

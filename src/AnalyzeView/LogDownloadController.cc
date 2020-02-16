@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,16 +11,13 @@
 #include "LogDownloadController.h"
 #include "MultiVehicleManager.h"
 #include "QGCMAVLink.h"
-#if !defined(__mobile__)
-#include "QGCQFileDialog.h"
-#include "MainWindow.h"
-#endif
 #include "UAS.h"
 #include "QGCApplication.h"
 #include "QGCToolbox.h"
 #include "QGCMapEngine.h"
 #include "ParameterManager.h"
 #include "Vehicle.h"
+#include "SettingsManager.h"
 
 #include <QDebug>
 #include <QSettings>
@@ -107,9 +104,9 @@ QGCLogEntry::sizeStr() const
 
 //----------------------------------------------------------------------------------------
 LogDownloadController::LogDownloadController(void)
-    : _uas(NULL)
-    , _downloadData(NULL)
-    , _vehicle(NULL)
+    : _uas(nullptr)
+    , _downloadData(nullptr)
+    , _vehicle(nullptr)
     , _requestingLogEntries(false)
     , _downloadingLogs(false)
     , _retries(0)
@@ -140,7 +137,7 @@ LogDownloadController::_setActiveVehicle(Vehicle* vehicle)
         _logEntriesModel.clear();
         disconnect(_uas, &UASInterface::logEntry, this, &LogDownloadController::_logEntry);
         disconnect(_uas, &UASInterface::logData,  this, &LogDownloadController::_logData);
-        _uas = NULL;
+        _uas = nullptr;
     }
     _vehicle = vehicle;
     if(_vehicle) {
@@ -173,14 +170,14 @@ LogDownloadController::_logEntry(UASInterface* uas, uint32_t time_utc, uint32_t 
     //-- Update this log record
     if(num_logs > 0) {
         //-- Skip if empty (APM first packet)
-        if(size) {
+        if(size || _vehicle->firmwareType() != MAV_AUTOPILOT_ARDUPILOTMEGA) {
             id -= _apmOneBased;
             if(id < _logEntriesModel.count()) {
                 QGCLogEntry* entry = _logEntriesModel[id];
                 entry->setSize(size);
                 entry->setTime(QDateTime::fromTime_t(time_utc));
                 entry->setReceived(true);
-                entry->setStatus(QString(tr("Available")));
+                entry->setStatus(tr("Available"));
             } else {
                 qWarning() << "Received log entry for out-of-bound index:" << id;
             }
@@ -227,7 +224,7 @@ LogDownloadController::_resetSelection(bool canceled)
         if(entry) {
             if(entry->selected()) {
                 if(canceled) {
-                    entry->setStatus(QString(tr("Canceled")));
+                    entry->setStatus(tr("Canceled"));
                 }
                 entry->setSelected(false);
             }
@@ -274,7 +271,7 @@ LogDownloadController::_findMissingEntries()
             for(int i = 0; i < num_logs; i++) {
                 QGCLogEntry* entry = _logEntriesModel[i];
                 if(entry && !entry->received()) {
-                    entry->setStatus(QString(tr("Error")));
+                    entry->setStatus(tr("Error"));
                 }
             }
             //-- Give up
@@ -295,6 +292,24 @@ LogDownloadController::_findMissingEntries()
         _receivedAllEntries();
     }
 }
+
+void LogDownloadController::_updateDataRate(void)
+{
+    if (_downloadData->elapsed.elapsed() >= kGUIRateMilliseconds) {
+        //-- Update download rate
+        qreal rrate = _downloadData->rate_bytes / (_downloadData->elapsed.elapsed() / 1000.0);
+        _downloadData->rate_avg = (_downloadData->rate_avg * 0.95) + (rrate * 0.05);
+        _downloadData->rate_bytes = 0;
+
+        //-- Update status
+        const QString status = QString("%1 (%2/s)").arg(QGCMapEngine::bigSizeToString(_downloadData->written),
+                                                        QGCMapEngine::bigSizeToString(_downloadData->rate_avg));
+
+        _downloadData->entry->setStatus(status);
+        _downloadData->elapsed.start();
+    }
+}
+
 
 //----------------------------------------------------------------------------------------
 void
@@ -320,7 +335,7 @@ LogDownloadController::_logData(UASInterface* uas, uint32_t ofs, uint16_t id, ui
     if(ofs <= _downloadData->entry->size()) {
         const uint32_t chunk = ofs / kChunkSize;
         if (chunk != _downloadData->current_chunk) {
-            qWarning() << "Ignored packet for out of order chunk" << chunk;
+            qWarning() << "Ignored packet for out of order chunk actual:expected" << chunk << _downloadData->current_chunk;
             return;
         }
         const uint16_t bin = (ofs - chunk*kChunkSize) / MAVLINK_MSG_LOG_DATA_FIELD_DATA_LEN;
@@ -340,19 +355,7 @@ LogDownloadController::_logData(UASInterface* uas, uint32_t ofs, uint16_t id, ui
         if(_downloadData->file.write((const char*)data, count)) {
             _downloadData->written += count;
             _downloadData->rate_bytes += count;
-            if (_downloadData->elapsed.elapsed() >= kGUIRateMilliseconds) {
-                //-- Update download rate
-                qreal rrate = _downloadData->rate_bytes/(_downloadData->elapsed.elapsed()/1000.0);
-                _downloadData->rate_avg = _downloadData->rate_avg*0.95 + rrate*0.05;
-                _downloadData->rate_bytes = 0;
-
-                //-- Update status
-                const QString status = QString("%1 (%2/s)").arg(QGCMapEngine::bigSizeToString(_downloadData->written),
-                                                                QGCMapEngine::bigSizeToString(_downloadData->rate_avg));
-
-                _downloadData->entry->setStatus(status);
-                _downloadData->elapsed.start();
-            }
+            _updateDataRate();
             result = true;
             //-- reset retries
             _retries = 0;
@@ -360,7 +363,7 @@ LogDownloadController::_logData(UASInterface* uas, uint32_t ofs, uint16_t id, ui
             _timer.start(timeout_time);
             //-- Do we have it all?
             if(_logComplete()) {
-                _downloadData->entry->setStatus(QString(tr("Downloaded")));
+                _downloadData->entry->setStatus(tr("Downloaded"));
                 //-- Check for more
                 _receivedAllData();
             } else if (_chunkComplete()) {
@@ -379,7 +382,7 @@ LogDownloadController::_logData(UASInterface* uas, uint32_t ofs, uint16_t id, ui
         qWarning() << "Received log offset greater than expected";
     }
     if(!result) {
-        _downloadData->entry->setStatus(QString(tr("Error")));
+        _downloadData->entry->setStatus(tr("Error"));
     }
 }
 
@@ -407,6 +410,7 @@ LogDownloadController::_receivedAllData()
     if(_prepareLogDownload()) {
         //-- Request Log
         _requestLogData(_downloadData->ID, 0, _downloadData->chunk_table.size()*MAVLINK_MSG_LOG_DATA_FIELD_DATA_LEN);
+        _timer.start(kTimeOutMilliseconds);
     } else {
         _resetSelection();
         _setDownloading(false);
@@ -424,13 +428,20 @@ LogDownloadController::_findMissingData()
         _downloadData->advanceChunk();
     }
 
-    if(_retries++ > 2) {
-        _downloadData->entry->setStatus(QString(tr("Timed Out")));
+    _retries++;
+#if 0
+    // Trying the change to infinite log download. This way if retries hit 100% failure the data rate will
+    // slowly fall to 0 and the user can Cancel. This should work better on really crappy links.
+    if(_retries > 5) {
+        _downloadData->entry->setStatus(tr("Timed Out"));
         //-- Give up
         qWarning() << "Too many errors retreiving log data. Giving up.";
         _receivedAllData();
         return;
     }
+#endif
+
+    _updateDataRate();
 
     uint16_t start = 0, end = 0;
     const int size = _downloadData->chunk_table.size();
@@ -448,17 +459,17 @@ LogDownloadController::_findMissingData()
 
     const uint32_t pos = _downloadData->current_chunk*kChunkSize + start*MAVLINK_MSG_LOG_DATA_FIELD_DATA_LEN,
                    len = (end - start)*MAVLINK_MSG_LOG_DATA_FIELD_DATA_LEN;
-    _requestLogData(_downloadData->ID, pos, len);
+    _requestLogData(_downloadData->ID, pos, len, _retries);
 }
 
 //----------------------------------------------------------------------------------------
 void
-LogDownloadController::_requestLogData(uint8_t id, uint32_t offset, uint32_t count)
+LogDownloadController::_requestLogData(uint16_t id, uint32_t offset, uint32_t count, int retryCount)
 {
     if(_vehicle) {
         //-- APM "Fix"
         id += _apmOneBased;
-        qCDebug(LogDownloadLog) << "Request log data (id:" << id << "offset:" << offset << "size:" << count << ")";
+        qCDebug(LogDownloadLog) << "Request log data (id:" << id << "offset:" << offset << "size:" << count << "retryCount" << retryCount << ")";
         mavlink_message_t msg;
         mavlink_msg_log_request_data_pack_chan(
                     qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
@@ -510,15 +521,15 @@ LogDownloadController::download(QString path)
     QString dir = path;
 #if defined(__mobile__)
     if(dir.isEmpty()) {
-        dir = QDir::homePath();
+        dir = qgcApp()->toolbox()->settingsManager()->appSettings()->logSavePath();
     }
 #else
     if(dir.isEmpty()) {
-        dir = QGCQFileDialog::getExistingDirectory(
-                MainWindow::instance(),
-                tr("Log Download Directory"),
-                QDir::homePath(),
-                QGCQFileDialog::ShowDirsOnly | QGCQFileDialog::DontResolveSymlinks);
+        dir = QString(); //-- TODO: QGCQFileDialog::getExistingDirectory(
+        //        MainWindow::instance(),
+        //        tr("Log Download Directory"),
+        //        QDir::homePath(),
+        //        QGCQFileDialog::ShowDirsOnly | QGCQFileDialog::DontResolveSymlinks);
     }
 #endif
     downloadToDirectory(dir);
@@ -529,10 +540,9 @@ void LogDownloadController::downloadToDirectory(const QString& dir)
     //-- Stop listing just in case
     _receivedAllEntries();
     //-- Reset downloads, again just in case
-    if(_downloadData) {
-        delete _downloadData;
-        _downloadData = 0;
-    }
+    delete _downloadData;
+    _downloadData = nullptr;
+
     _downloadPath = dir;
     if(!_downloadPath.isEmpty()) {
         if(!_downloadPath.endsWith(QDir::separator()))
@@ -543,7 +553,7 @@ void LogDownloadController::downloadToDirectory(const QString& dir)
             QGCLogEntry* entry = _logEntriesModel[i];
             if(entry) {
                 if(entry->selected()) {
-                   entry->setStatus(QString(tr("Waiting")));
+                   entry->setStatus(tr("Waiting"));
                 }
             }
         }
@@ -568,17 +578,16 @@ LogDownloadController::_getNextSelected()
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 //----------------------------------------------------------------------------------------
 bool
 LogDownloadController::_prepareLogDownload()
 {
-    if(_downloadData) {
-        delete _downloadData;
-        _downloadData = NULL;
-    }
+    delete _downloadData;
+    _downloadData = nullptr;
+
     QGCLogEntry* entry = _getNextSelected();
     if(!entry) {
         return false;
@@ -589,14 +598,14 @@ LogDownloadController::_prepareLogDownload()
     bool result = false;
     QString ftime;
     if(entry->time().date().year() < 2010) {
-        ftime = "UnknownDate";
+        ftime = tr("UnknownDate");
     } else {
-        ftime = entry->time().toString("yyyy-M-d-hh-mm-ss");
+        ftime = entry->time().toString(QStringLiteral("yyyy-M-d-hh-mm-ss"));
     }
     _downloadData = new LogDownloadData(entry);
     _downloadData->filename = QString("log_") + QString::number(entry->id()) + "_" + ftime;
     if (_vehicle->firmwareType() == MAV_AUTOPILOT_PX4) {
-        QString loggerParam("SYS_LOGGER");
+        QString loggerParam = QStringLiteral("SYS_LOGGER");
         if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, loggerParam) &&
                 _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, loggerParam)->rawValue().toInt() == 0) {
             _downloadData->filename += ".px4log";
@@ -634,9 +643,9 @@ LogDownloadController::_prepareLogDownload()
         if (_downloadData->file.exists()) {
             _downloadData->file.remove();
         }
-        _downloadData->entry->setStatus(QString(tr("Error")));
+        _downloadData->entry->setStatus(tr("Error"));
         delete _downloadData;
-        _downloadData = NULL;
+        _downloadData = nullptr;
     }
     return result;
 }
@@ -688,7 +697,7 @@ LogDownloadController::cancel(void)
         _receivedAllEntries();
     }
     if(_downloadData) {
-        _downloadData->entry->setStatus(QString(tr("Canceled")));
+        _downloadData->entry->setStatus(tr("Canceled"));
         if (_downloadData->file.exists()) {
             _downloadData->file.remove();
         }
@@ -711,7 +720,7 @@ QGCLogEntry*
 QGCLogModel::get(int index)
 {
     if (index < 0 || index >= _logEntries.count()) {
-        return NULL;
+        return nullptr;
     }
     return _logEntries[index];
 }

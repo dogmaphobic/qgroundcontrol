@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -16,8 +16,7 @@
  *
  */
 
-#ifndef SERIALLINK_H
-#define SERIALLINK_H
+#pragma once
 
 class LinkInterface;
 class SerialConfiguration;
@@ -44,6 +43,7 @@ Q_DECLARE_METATYPE(QSerialPort::SerialPortError)
 
 Q_DECLARE_LOGGING_CATEGORY(SerialLinkLog)
 
+/// SerialLink configuration
 class SerialConfiguration : public LinkConfiguration
 {
     Q_OBJECT
@@ -86,10 +86,12 @@ public:
     /// From LinkConfiguration
     LinkType    type            () { return LinkConfiguration::TypeSerial; }
     void        copyFrom        (LinkConfiguration* source);
+    bool        isHighLatencyAllowed () { return true; }
     void        loadSettings    (QSettings& settings, const QString& root);
     void        saveSettings    (QSettings& settings, const QString& root);
     void        updateSettings  ();
     QString     settingsURL     () { return "SerialSettings.qml"; }
+    QString     settingsTitle   () { return tr("Serial Link Settings"); }
 
 signals:
     void baudChanged            ();
@@ -137,11 +139,15 @@ public:
     void    requestReset();
     bool    isConnected() const;
     qint64  getConnectionSpeed() const;
+    SerialConfiguration* getSerialConfig() const { return _serialConfig; }
 
     // These are left unimplemented in order to cause linker errors which indicate incorrect usage of
     // connect/disconnect on link directly. All connect/disconnect calls should be made through LinkManager.
     bool    connect(void);
     bool    disconnect(void);
+
+    /// Don't even think of calling this method!
+    QSerialPort* _hackAccessToPort(void) { return _port; }
 
 private slots:
     /**
@@ -167,7 +173,7 @@ private slots:
 
 private:
     // Links are only created/destroyed by LinkManager so constructor/destructor is not public
-    SerialLink(SharedLinkConfigurationPointer& config);
+    SerialLink(SharedLinkConfigurationPointer& config, bool isPX4Flow = false);
     ~SerialLink();
 
     // From LinkInterface
@@ -192,4 +198,3 @@ signals:
 
 };
 
-#endif // SERIALLINK_H

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -14,6 +14,18 @@
 
 namespace QGC
 {
+
+static quint64 gBootTime = 0;
+
+void initTimer()
+{
+    gBootTime = groundTimeMilliseconds();
+}
+
+quint64 bootTimeMilliseconds()
+{
+    return groundTimeMilliseconds() - gBootTime;
+}
 
 quint64 groundTimeUsecs()
 {
@@ -30,7 +42,7 @@ qreal groundTimeSeconds()
     return static_cast<qreal>(groundTimeMilliseconds()) / 1000.0f;
 }
 
-float limitAngleToPMPIf(float angle)
+float limitAngleToPMPIf(double angle)
 {
     if (angle > -20*M_PI && angle < 20*M_PI)
     {
@@ -61,14 +73,14 @@ double limitAngleToPMPId(double angle)
         {
             while (angle < -M_PI)
             {
-                angle += M_PI;
+                angle += 2.0f * M_PI;
             }
         }
         else if (angle > M_PI)
         {
             while (angle > M_PI)
             {
-                angle -= M_PI;
+                angle -= 2.0f * M_PI;
             }
         }
     }

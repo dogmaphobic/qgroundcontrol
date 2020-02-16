@@ -1,25 +1,22 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#ifndef LINKCONFIGURATION_H
-#define LINKCONFIGURATION_H
+#pragma once
 
 #include <QSettings>
 
 class LinkInterface;
 
 /// Interface holding link specific settings.
-
 class LinkConfiguration : public QObject
 {
     Q_OBJECT
-    Q_ENUMS(LinkType)
 
 public:
     LinkConfiguration(const QString& name);
@@ -33,6 +30,9 @@ public:
     Q_PROPERTY(bool             autoConnect         READ isAutoConnect  WRITE setAutoConnect    NOTIFY autoConnectChanged)
     Q_PROPERTY(bool             autoConnectAllowed  READ isAutoConnectAllowed                   CONSTANT)
     Q_PROPERTY(QString          settingsURL         READ settingsURL                            CONSTANT)
+    Q_PROPERTY(QString          settingsTitle       READ settingsTitle                          CONSTANT)
+    Q_PROPERTY(bool             highLatency         READ isHighLatency  WRITE setHighLatency    NOTIFY highLatencyChanged)
+    Q_PROPERTY(bool             highLatencyAllowed  READ isHighLatencyAllowed                   CONSTANT)
 
     // Property accessors
 
@@ -56,11 +56,10 @@ public:
 #ifdef QT_DEBUG
         TypeMock,       ///< Mock Link for Unitesting
 #endif
-#ifndef __mobile__
         TypeLogReplay,
-#endif
         TypeLast        // Last type value (type >= TypeLast == invalid)
     };
+    Q_ENUM(LinkType)
 
     /*!
      *
@@ -77,6 +76,13 @@ public:
     bool isAutoConnect() { return _autoConnect; }
 
     /*!
+     *
+     * Is this a High Latency configuration?
+     * @return True if this is an High Latency configuration (link with large delays).
+     */
+    bool isHighLatency() { return _highLatency; }
+
+    /*!
      * Set if this is this a dynamic configuration. (decided at runtime)
     */
     void setDynamic(bool dynamic = true) { _dynamic = dynamic; emit dynamicChanged(); }
@@ -86,6 +92,11 @@ public:
     */
     void setAutoConnect(bool autoc = true) { _autoConnect = autoc; emit autoConnectChanged(); }
 
+    /*!
+     * Set if this is this an High Latency configuration.
+    */
+    void setHighLatency(bool hl = false) { _highLatency = hl; emit highLatencyChanged(); }
+
     /// Virtual Methods
 
     /*!
@@ -94,6 +105,13 @@ public:
      * @return True if this type can be set as an Auto Connect configuration
      */
     virtual bool isAutoConnectAllowed() { return false; }
+
+    /*!
+     *
+     * Is High Latency allowed for this type?
+     * @return True if this type can be set as an High Latency configuration
+     */
+    virtual bool isHighLatencyAllowed() { return false; }
 
     /*!
      * @brief Connection type
@@ -126,7 +144,14 @@ public:
      *
      * Pure virtual method providing the URL for the (QML) settings dialog
      */
-    virtual QString settingsURL() = 0;
+    virtual QString settingsURL     () = 0;
+
+    /*!
+     * @brief Settings Title
+     *
+     * Pure virtual method providing the Title for the (QML) settings dialog
+     */
+    virtual QString settingsTitle   () = 0;
 
     /*!
      * @brief Update settings
@@ -174,6 +199,7 @@ signals:
     void dynamicChanged     ();
     void autoConnectChanged ();
     void linkChanged        (LinkInterface* link);
+    void highLatencyChanged ();
 
 protected:
     LinkInterface* _link; ///< Link currently using this configuration (if any)
@@ -181,8 +207,8 @@ private:
     QString _name;
     bool    _dynamic;       ///< A connection added automatically and not persistent (unless it's edited).
     bool    _autoConnect;   ///< This connection is started automatically at boot
+    bool    _highLatency;
 };
 
 typedef QSharedPointer<LinkConfiguration> SharedLinkConfigurationPointer;
 
-#endif // LINKCONFIGURATION_H

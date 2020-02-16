@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -30,16 +30,16 @@
 PX4AutoPilotPlugin::PX4AutoPilotPlugin(Vehicle* vehicle, QObject* parent)
     : AutoPilotPlugin(vehicle, parent)
     , _incorrectParameterVersion(false)
-    , _airframeComponent(NULL)
-    , _radioComponent(NULL)
-    , _esp8266Component(NULL)
-    , _flightModesComponent(NULL)
-    , _sensorsComponent(NULL)
-    , _safetyComponent(NULL)
-    , _powerComponent(NULL)
-    , _motorComponent(NULL)
-    , _tuningComponent(NULL)
-    , _syslinkComponent(NULL)
+    , _airframeComponent(nullptr)
+    , _radioComponent(nullptr)
+    , _esp8266Component(nullptr)
+    , _flightModesComponent(nullptr)
+    , _sensorsComponent(nullptr)
+    , _safetyComponent(nullptr)
+    , _powerComponent(nullptr)
+    , _motorComponent(nullptr)
+    , _tuningComponent(nullptr)
+    , _syslinkComponent(nullptr)
 {
     if (!vehicle) {
         qWarning() << "Internal error";
@@ -66,15 +66,15 @@ const QVariantList& PX4AutoPilotPlugin::vehicleComponents(void)
                 _airframeComponent->setupTriggerSignals();
                 _components.append(QVariant::fromValue((VehicleComponent*)_airframeComponent));
 
-                _radioComponent = new PX4RadioComponent(_vehicle, this);
-                _radioComponent->setupTriggerSignals();
-                _components.append(QVariant::fromValue((VehicleComponent*)_radioComponent));
-
                 if (!_vehicle->hilMode()) {
                     _sensorsComponent = new SensorsComponent(_vehicle, this);
                     _sensorsComponent->setupTriggerSignals();
                     _components.append(QVariant::fromValue((VehicleComponent*)_sensorsComponent));
                 }
+
+                _radioComponent = new PX4RadioComponent(_vehicle, this);
+                _radioComponent->setupTriggerSignals();
+                _components.append(QVariant::fromValue((VehicleComponent*)_radioComponent));
 
                 _flightModesComponent = new FlightModesComponent(_vehicle, this);
                 _flightModesComponent->setupTriggerSignals();
@@ -84,12 +84,9 @@ const QVariantList& PX4AutoPilotPlugin::vehicleComponents(void)
                 _powerComponent->setupTriggerSignals();
                 _components.append(QVariant::fromValue((VehicleComponent*)_powerComponent));
 
-#if 0
-                // Coming soon
                 _motorComponent = new MotorComponent(_vehicle, this);
                 _motorComponent->setupTriggerSignals();
                 _components.append(QVariant::fromValue((VehicleComponent*)_motorComponent));
-#endif
 
                 _safetyComponent = new SafetyComponent(_vehicle, this);
                 _safetyComponent->setupTriggerSignals();
@@ -134,14 +131,10 @@ void PX4AutoPilotPlugin::parametersReadyPreChecks(void)
     // Base class must be called
     AutoPilotPlugin::parametersReadyPreChecks();
 
-    // Check for older parameter version set
-    // FIXME: Firmware is moving to version stamp parameter set. Once that is complete the version stamp
-    // should be used instead.
-    if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, "SENS_GYRO_XOFF") ||
-            _vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, "COM_DL_LOSS_EN")) {
-        _incorrectParameterVersion = true;
-        qgcApp()->showMessage("This version of GroundControl can only perform vehicle setup on a newer version of firmware. "
-                              "Please perform a Firmware Upgrade if you wish to use Vehicle Setup.");
+    QString hitlParam("SYS_HITL");
+    if (_vehicle->parameterManager()->parameterExists(FactSystem::defaultComponentId, hitlParam) &&
+            _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, hitlParam)->rawValue().toBool()) {
+        qgcApp()->showMessage(tr("Warning: Hardware In The Loop (HITL) simulation is enabled for this vehicle."));
     }
 }
 

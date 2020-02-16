@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -14,12 +14,14 @@
 #include "MissionItem.h"
 #include "Fact.h"
 
+#define VIDEO_CAPTURE_STATUS_INTERVAL 0.2   //-- Send capture status every 5 seconds
+
 class CameraSection : public Section
 {
     Q_OBJECT
 
 public:
-    CameraSection(Vehicle* vehicle, QObject* parent = NULL);
+    CameraSection(Vehicle* vehicle, QObject* parent = nullptr);
 
     // These enum values must match the json meta data
 
@@ -31,14 +33,8 @@ public:
         TakeVideo,
         StopTakingVideo,
         TakePhoto
-    };    
-    Q_ENUMS(CameraAction)
-
-    enum CameraMode {
-        CameraModePhoto,
-        CameraModeVideo
     };
-    Q_ENUMS(CameraMode)
+    Q_ENUM(CameraAction)
 
     Q_PROPERTY(bool     specifyGimbal                   READ specifyGimbal                  WRITE setSpecifyGimbal              NOTIFY specifyGimbalChanged)
     Q_PROPERTY(Fact*    gimbalPitch                     READ gimbalPitch                                                        CONSTANT)
@@ -63,8 +59,20 @@ public:
     void setSpecifyGimbal       (bool specifyGimbal);
     void setSpecifyCameraMode   (bool specifyCameraMode);
 
+    ///< Signals specifiedGimbalYawChanged
     ///< @return The gimbal yaw specified by this item, NaN if not specified
     double specifiedGimbalYaw(void) const;
+
+    ///< Signals specifiedGimbalPitchChanged
+    ///< @return The gimbal pitch specified by this item, NaN if not specified
+    double specifiedGimbalPitch(void) const;
+
+    static bool scanStopTakingPhotos(QmlObjectListModel* visualItems, int scanIndex, bool removeScannedItems);
+    static bool scanStopTakingVideo(QmlObjectListModel* visualItems, int scanIndex, bool removeScannedItems);
+    static void appendStopTakingPhotos(QList<MissionItem*>& items, int& seqNum, QObject* missionItemParent);
+    static void appendStopTakingVideo(QList<MissionItem*>& items, int& seqNum, QObject* missionItemParent);
+    static int  stopTakingPhotosCommandCount(void) { return 2; }
+    static int  stopTakingVideoCommandCount(void) { return 1; }
 
     // Overrides from Section
     bool available          (void) const override { return _available; }
@@ -80,24 +88,25 @@ signals:
     bool specifyGimbalChanged       (bool specifyGimbal);
     bool specifyCameraModeChanged   (bool specifyCameraMode);
     void specifiedGimbalYawChanged  (double gimbalYaw);
+    void specifiedGimbalPitchChanged(double gimbalPitch);
 
 private slots:
     void _setDirty(void);
     void _setDirtyAndUpdateItemCount(void);
     void _updateSpecifiedGimbalYaw(void);
+    void _updateSpecifiedGimbalPitch(void);
     void _specifyChanged(void);
     void _updateSettingsSpecified(void);
     void _cameraActionChanged(void);
+    void _dirtyIfSpecified(void);
 
 private:
     bool _scanGimbal(QmlObjectListModel* visualItems, int scanIndex);
     bool _scanTakePhoto(QmlObjectListModel* visualItems, int scanIndex);
     bool _scanTakePhotosIntervalTime(QmlObjectListModel* visualItems, int scanIndex);
-    bool _scanStopTakingPhotos(QmlObjectListModel* visualItems, int scanIndex);
     bool _scanTriggerStartDistance(QmlObjectListModel* visualItems, int scanIndex);
     bool _scanTriggerStopDistance(QmlObjectListModel* visualItems, int scanIndex);
     bool _scanTakeVideo(QmlObjectListModel* visualItems, int scanIndex);
-    bool _scanStopTakingVideo(QmlObjectListModel* visualItems, int scanIndex);
     bool _scanSetCameraMode(QmlObjectListModel* visualItems, int scanIndex);
 
     bool    _available;

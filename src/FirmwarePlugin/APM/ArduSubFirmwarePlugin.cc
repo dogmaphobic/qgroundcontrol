@@ -32,22 +32,35 @@ FirmwarePlugin::remapParamNameMajorVersionMap_t ArduSubFirmwarePlugin::_remapPar
 APMSubMode::APMSubMode(uint32_t mode, bool settable) :
     APMCustomMode(mode, settable)
 {
-    QMap<uint32_t,QString> enumToString;
-    enumToString.insert(MANUAL, "Manual");
-    enumToString.insert(STABILIZE, "Stabilize");
-    enumToString.insert(ALT_HOLD,  "Depth Hold");
-
-    setEnumToStringMapping(enumToString);
+    setEnumToStringMapping({
+        {MANUAL, "Manual"},
+        {STABILIZE, "Stabilize"},
+        {ACRO, "Acro"},
+        {ALT_HOLD,  "Depth Hold"},
+        {AUTO, "Auto"},
+        {GUIDED, "Guided"},
+        {CIRCLE, "Circle"},
+        {SURFACE, "Surface"},
+        {POSHOLD, "Position Hold"},
+        {MOTORDETECTION, "Motor Detection"},
+    });
 }
 
 ArduSubFirmwarePlugin::ArduSubFirmwarePlugin(void):
     _infoFactGroup(this)
 {
-    QList<APMCustomMode> supportedFlightModes;
-    supportedFlightModes << APMSubMode(APMSubMode::MANUAL ,true);
-    supportedFlightModes << APMSubMode(APMSubMode::STABILIZE ,true);
-    supportedFlightModes << APMSubMode(APMSubMode::ALT_HOLD  ,true);
-    setSupportedModes(supportedFlightModes);
+    setSupportedModes({
+        APMSubMode(APMSubMode::MANUAL ,true),
+        APMSubMode(APMSubMode::STABILIZE ,true),
+        APMSubMode(APMSubMode::ACRO ,true),
+        APMSubMode(APMSubMode::ALT_HOLD  ,true),
+        APMSubMode(APMSubMode::AUTO ,true),
+        APMSubMode(APMSubMode::GUIDED ,true),
+        APMSubMode(APMSubMode::CIRCLE ,true),
+        APMSubMode(APMSubMode::SURFACE ,false),
+        APMSubMode(APMSubMode::POSHOLD ,true),
+        APMSubMode(APMSubMode::MOTORDETECTION, false),
+    });
 
     if (!_remapParamNameIntialized) {
         FirmwarePlugin::remapParamNameMap_t& remapV3_5 = _remapParamName[3][5];
@@ -98,31 +111,95 @@ ArduSubFirmwarePlugin::ArduSubFirmwarePlugin(void):
 
         remapV3_5["FENCE_ALT_MIN"] = QStringLiteral("FENCE_DEPTH_MAX");
 
+        FirmwarePlugin::remapParamNameMap_t& remapV3_6 = _remapParamName[3][6];
+
+        remapV3_6["BATT_ARM_VOLT"] = QStringLiteral("ARMING_MIN_VOLT");
+        remapV3_6["BATT2_ARM_VOLT"] = QStringLiteral("ARMING_MIN_VOLT2");
+        remapV3_6["BATT_AMP_PERVLT"] =  QStringLiteral("BATT_AMP_PERVOLT");
+        remapV3_6["BATT2_AMP_PERVLT"] = QStringLiteral("BATT2_AMP_PERVOL");
+        remapV3_6["BATT_LOW_MAH"] = QStringLiteral("FS_BATT_MAH");
+        remapV3_6["BATT_LOW_VOLT"] = QStringLiteral("FS_BATT_VOLTAGE");
+        remapV3_6["BATT_FS_LOW_ACT"] = QStringLiteral("FS_BATT_ENABLE");
+        remapV3_6["PSC_POSXY_P"] = QStringLiteral("POS_XY_P");
+        remapV3_6["PSC_POSZ_P"] = QStringLiteral("POS_Z_P");
+        remapV3_6["PSC_VELXY_P"] = QStringLiteral("VEL_XY_P");
+        remapV3_6["PSC_VELXY_I"] = QStringLiteral("VEL_XY_I");
+        remapV3_6["PSC_VELXY_IMAX"] = QStringLiteral("VEL_XY_IMAX");
+        remapV3_6["PSC_VELZ_P"] = QStringLiteral("VEL_Z_P");
+        remapV3_6["PSC_ACCZ_I"] = QStringLiteral("ACCEL_Z_I");
+        remapV3_6["PSC_ACCZ_D"] = QStringLiteral("ACCEL_Z_D");
+        remapV3_6["PSC_ACCZ_P"] = QStringLiteral("ACCEL_Z_P");
+        remapV3_6["PSC_ACCZ_IMAX"] = QStringLiteral("ACCEL_Z_IMAX");
+        remapV3_6["PSC_ACCZ_FILT"] = QStringLiteral("ACCEL_Z_FILT");
+
         _remapParamNameIntialized = true;
     }
 
     _nameToFactGroupMap.insert("APMSubInfo", &_infoFactGroup);
+
+    _factRenameMap[QStringLiteral("altitudeRelative")] = QStringLiteral("Depth");
+    _factRenameMap[QStringLiteral("flightTime")] = QStringLiteral("Dive Time");
+    _factRenameMap[QStringLiteral("altitudeAMSL")] = QStringLiteral("");
+    _factRenameMap[QStringLiteral("hobbs")] = QStringLiteral("");
+    _factRenameMap[QStringLiteral("airSpeed")] = QStringLiteral("");
+}
+
+QList<MAV_CMD> ArduSubFirmwarePlugin::supportedMissionCommands(void)
+{
+    return {
+        MAV_CMD_NAV_WAYPOINT,
+        MAV_CMD_NAV_RETURN_TO_LAUNCH,
+        MAV_CMD_NAV_LAND,
+        MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT,
+        MAV_CMD_NAV_SPLINE_WAYPOINT,
+        MAV_CMD_NAV_GUIDED_ENABLE,
+        MAV_CMD_NAV_DELAY,
+        MAV_CMD_CONDITION_DELAY, MAV_CMD_CONDITION_DISTANCE, MAV_CMD_CONDITION_YAW,
+        MAV_CMD_DO_SET_MODE,
+        MAV_CMD_DO_JUMP,
+        MAV_CMD_DO_CHANGE_SPEED,
+        MAV_CMD_DO_SET_HOME,
+        MAV_CMD_DO_SET_RELAY, MAV_CMD_DO_REPEAT_RELAY,
+        MAV_CMD_DO_SET_SERVO, MAV_CMD_DO_REPEAT_SERVO,
+        MAV_CMD_DO_LAND_START,
+        MAV_CMD_DO_SET_ROI,
+        MAV_CMD_DO_DIGICAM_CONFIGURE, MAV_CMD_DO_DIGICAM_CONTROL,
+        MAV_CMD_DO_MOUNT_CONTROL,
+        MAV_CMD_DO_SET_CAM_TRIGG_DIST,
+        MAV_CMD_DO_FENCE_ENABLE,
+        MAV_CMD_DO_INVERTED_FLIGHT,
+        MAV_CMD_DO_GRIPPER,
+        MAV_CMD_DO_GUIDED_LIMITS,
+        MAV_CMD_DO_AUTOTUNE_ENABLE,
+    };
 }
 
 int ArduSubFirmwarePlugin::remapParamNameHigestMinorVersionNumber(int majorVersionNumber) const
 {
-    // Remapping supports up to 3.5
-    return majorVersionNumber == 3 ? 5 : Vehicle::versionNotSetValue;
+    // Remapping supports up to 3.6
+    return majorVersionNumber == 3 ? 6 : Vehicle::versionNotSetValue;
 }
 
-int ArduSubFirmwarePlugin::manualControlReservedButtonCount(void)
+void ArduSubFirmwarePlugin::initializeStreamRates(Vehicle* vehicle) {
+    vehicle->requestDataStream(MAV_DATA_STREAM_RAW_SENSORS,     2);
+    vehicle->requestDataStream(MAV_DATA_STREAM_EXTENDED_STATUS, 2);
+    vehicle->requestDataStream(MAV_DATA_STREAM_RC_CHANNELS,     2);
+    vehicle->requestDataStream(MAV_DATA_STREAM_POSITION,        3);
+    vehicle->requestDataStream(MAV_DATA_STREAM_EXTRA1,          20);
+    vehicle->requestDataStream(MAV_DATA_STREAM_EXTRA2,          10);
+    vehicle->requestDataStream(MAV_DATA_STREAM_EXTRA3,          3);
+}
+
+bool ArduSubFirmwarePlugin::isCapable(const Vehicle* vehicle, FirmwareCapabilities capabilities)
 {
-    return 0;
+    Q_UNUSED(vehicle);
+    uint32_t available = SetFlightModeCapability | PauseVehicleCapability;
+    return (capabilities & available) == capabilities;
 }
 
 bool ArduSubFirmwarePlugin::supportsThrottleModeCenterZero(void)
 {
     return false;
-}
-
-bool ArduSubFirmwarePlugin::supportsManualControl(void)
-{
-    return true;
 }
 
 bool ArduSubFirmwarePlugin::supportsRadio(void)
@@ -145,11 +222,13 @@ const QVariantList& ArduSubFirmwarePlugin::toolBarIndicators(const Vehicle* vehi
     Q_UNUSED(vehicle);
     //-- Sub specific list of indicators (Enter your modified list here)
     if(_toolBarIndicators.size() == 0) {
-        _toolBarIndicators.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/MessageIndicator.qml")));
-        _toolBarIndicators.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/BatteryIndicator.qml")));
-        _toolBarIndicators.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/JoystickIndicator.qml")));
-        _toolBarIndicators.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/ModeIndicator.qml")));
-        _toolBarIndicators.append(QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/ArmedIndicator.qml")));
+        _toolBarIndicators = QVariantList({
+            QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/MessageIndicator.qml")),
+            QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/BatteryIndicator.qml")),
+            QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/JoystickIndicator.qml")),
+            QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/ModeIndicator.qml")),
+            QVariant::fromValue(QUrl::fromUserInput("qrc:/toolbar/ArmedIndicator.qml")),
+        });
     }
     return _toolBarIndicators;
 }
@@ -171,6 +250,8 @@ void ArduSubFirmwarePlugin::_handleNamedValueFloat(mavlink_message_t* message)
         _infoFactGroup.getFact("lights 2")->setRawValue(value.value * 100);
     } else if (name == "PilotGain") {
         _infoFactGroup.getFact("pilot gain")->setRawValue(value.value * 100);
+    } else if (name == "InputHold") {
+        _infoFactGroup.getFact("input hold")->setRawValue(value.value);
     }
 }
 
@@ -179,6 +260,14 @@ void ArduSubFirmwarePlugin::_handleMavlinkMessage(mavlink_message_t* message)
     switch (message->msgid) {
     case (MAVLINK_MSG_ID_NAMED_VALUE_FLOAT):
         _handleNamedValueFloat(message);
+        break;
+    case (MAVLINK_MSG_ID_RANGEFINDER):
+    {
+        mavlink_rangefinder_t msg;
+        mavlink_msg_rangefinder_decode(message, &msg);
+        _infoFactGroup.getFact("rangefinder distance")->setRawValue(msg.distance);
+        break;
+    }
     }
 }
 
@@ -192,30 +281,61 @@ QMap<QString, FactGroup*>* ArduSubFirmwarePlugin::factGroups(void) {
     return &_nameToFactGroupMap;
 }
 
-const char* APMSubmarineFactGroup::_camTiltFactName = "camera tilt";
-const char* APMSubmarineFactGroup::_tetherTurnsFactName = "tether turns";
-const char* APMSubmarineFactGroup::_lightsLevel1FactName = "lights 1";
-const char* APMSubmarineFactGroup::_lightsLevel2FactName = "lights 2";
-const char* APMSubmarineFactGroup::_pilotGainFactName = "pilot gain";
+const char* APMSubmarineFactGroup::_camTiltFactName             = "camera tilt";
+const char* APMSubmarineFactGroup::_tetherTurnsFactName         = "tether turns";
+const char* APMSubmarineFactGroup::_lightsLevel1FactName        = "lights 1";
+const char* APMSubmarineFactGroup::_lightsLevel2FactName        = "lights 2";
+const char* APMSubmarineFactGroup::_pilotGainFactName           = "pilot gain";
+const char* APMSubmarineFactGroup::_inputHoldFactName           = "input hold";
+const char* APMSubmarineFactGroup::_rangefinderDistanceFactName = "rangefinder distance";
 
 APMSubmarineFactGroup::APMSubmarineFactGroup(QObject* parent)
     : FactGroup(300, ":/json/Vehicle/SubmarineFact.json", parent)
-    , _camTiltFact       (0, _camTiltFactName,       FactMetaData::valueTypeDouble)
-    , _tetherTurnsFact   (0, _tetherTurnsFactName,   FactMetaData::valueTypeDouble)
-    , _lightsLevel1Fact  (0, _lightsLevel1FactName,  FactMetaData::valueTypeDouble)
-    , _lightsLevel2Fact  (0, _lightsLevel2FactName,  FactMetaData::valueTypeDouble)
-    , _pilotGainFact     (0, _pilotGainFactName,     FactMetaData::valueTypeDouble)
+    , _camTiltFact             (0, _camTiltFactName,             FactMetaData::valueTypeDouble)
+    , _tetherTurnsFact         (0, _tetherTurnsFactName,         FactMetaData::valueTypeDouble)
+    , _lightsLevel1Fact        (0, _lightsLevel1FactName,        FactMetaData::valueTypeDouble)
+    , _lightsLevel2Fact        (0, _lightsLevel2FactName,        FactMetaData::valueTypeDouble)
+    , _pilotGainFact           (0, _pilotGainFactName,           FactMetaData::valueTypeDouble)
+    , _inputHoldFact           (0, _inputHoldFactName,           FactMetaData::valueTypeDouble)
+    , _rangefinderDistanceFact (0, _rangefinderDistanceFactName, FactMetaData::valueTypeDouble)
 {
-    _addFact(&_camTiltFact,       _camTiltFactName);
-    _addFact(&_tetherTurnsFact,   _tetherTurnsFactName);
-    _addFact(&_lightsLevel1Fact,  _lightsLevel1FactName);
-    _addFact(&_lightsLevel2Fact,  _lightsLevel2FactName);
-    _addFact(&_pilotGainFact,     _pilotGainFactName);
+    _addFact(&_camTiltFact,             _camTiltFactName);
+    _addFact(&_tetherTurnsFact,         _tetherTurnsFactName);
+    _addFact(&_lightsLevel1Fact,        _lightsLevel1FactName);
+    _addFact(&_lightsLevel2Fact,        _lightsLevel2FactName);
+    _addFact(&_pilotGainFact,           _pilotGainFactName);
+    _addFact(&_inputHoldFact,           _inputHoldFactName);
+    _addFact(&_rangefinderDistanceFact, _rangefinderDistanceFactName);
 
     // Start out as not available "--.--"
-    _camTiltFact.setRawValue       (std::numeric_limits<float>::quiet_NaN());
-    _tetherTurnsFact.setRawValue   (std::numeric_limits<float>::quiet_NaN());
-    _lightsLevel1Fact.setRawValue  (std::numeric_limits<float>::quiet_NaN());
-    _lightsLevel2Fact.setRawValue  (std::numeric_limits<float>::quiet_NaN());
-    _pilotGainFact.setRawValue     (std::numeric_limits<float>::quiet_NaN());
+    _camTiltFact.setRawValue             (std::numeric_limits<float>::quiet_NaN());
+    _tetherTurnsFact.setRawValue         (std::numeric_limits<float>::quiet_NaN());
+    _lightsLevel1Fact.setRawValue        (std::numeric_limits<float>::quiet_NaN());
+    _lightsLevel2Fact.setRawValue        (std::numeric_limits<float>::quiet_NaN());
+    _pilotGainFact.setRawValue           (std::numeric_limits<float>::quiet_NaN());
+    _inputHoldFact.setRawValue           (std::numeric_limits<float>::quiet_NaN());
+    _rangefinderDistanceFact.setRawValue (std::numeric_limits<float>::quiet_NaN());
+
+}
+
+QString ArduSubFirmwarePlugin::vehicleImageOpaque(const Vehicle* vehicle) const
+{
+    Q_UNUSED(vehicle);
+    return QStringLiteral("/qmlimages/subVehicleArrowOpaque.png");
+}
+
+QString ArduSubFirmwarePlugin::vehicleImageOutline(const Vehicle* vehicle) const
+{
+    return vehicleImageOpaque(vehicle);
+}
+
+void ArduSubFirmwarePlugin::adjustMetaData(MAV_TYPE vehicleType, FactMetaData* metaData)
+{
+    Q_UNUSED(vehicleType);
+    if (!metaData) {
+        return;
+    }
+    if (_factRenameMap.contains(metaData->name())) {
+        metaData->setShortDescription(QString(_factRenameMap[metaData->name()]));
+    }
 }

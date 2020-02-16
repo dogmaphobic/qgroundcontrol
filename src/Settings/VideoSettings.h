@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -17,51 +17,60 @@ class VideoSettings : public SettingsGroup
     Q_OBJECT
 
 public:
-    VideoSettings(QObject* parent = NULL);
+    VideoSettings(QObject* parent = nullptr);
+    DEFINE_SETTING_NAME_GROUP()
 
-    Q_PROPERTY(Fact* videoSource        READ videoSource        CONSTANT)
-    Q_PROPERTY(Fact* udpPort            READ udpPort            CONSTANT)
-    Q_PROPERTY(Fact* rtspUrl            READ rtspUrl            CONSTANT)
-    Q_PROPERTY(Fact* aspectRatio        READ aspectRatio        CONSTANT)
-    Q_PROPERTY(Fact* gridLines          READ gridLines          CONSTANT)
-    Q_PROPERTY(Fact* showRecControl     READ showRecControl     CONSTANT)
-    Q_PROPERTY(Fact* recordingFormat    READ recordingFormat    CONSTANT)
-    Q_PROPERTY(Fact* maxVideoSize       READ maxVideoSize       CONSTANT)
+    DEFINE_SETTINGFACT(videoSource)
+    DEFINE_SETTINGFACT(udpPort)
+    DEFINE_SETTINGFACT(tcpUrl)
+    DEFINE_SETTINGFACT(rtspUrl)
+    DEFINE_SETTINGFACT(aspectRatio)
+    DEFINE_SETTINGFACT(videoFit)
+    DEFINE_SETTINGFACT(gridLines)
+    DEFINE_SETTINGFACT(showRecControl)
+    DEFINE_SETTINGFACT(recordingFormat)
+    DEFINE_SETTINGFACT(maxVideoSize)
+    DEFINE_SETTINGFACT(enableStorageLimit)
+    DEFINE_SETTINGFACT(rtspTimeout)
+    DEFINE_SETTINGFACT(streamEnabled)
+    DEFINE_SETTINGFACT(disableWhenDisarmed)
 
-    Fact* videoSource       (void);
-    Fact* udpPort           (void);
-    Fact* rtspUrl           (void);
-    Fact* aspectRatio       (void);
-    Fact* gridLines         (void);
-    Fact* showRecControl    (void);
-    Fact* recordingFormat   (void);
-    Fact* maxVideoSize      (void);
+    Q_PROPERTY(bool     streamConfigured        READ streamConfigured       NOTIFY streamConfiguredChanged)
+    Q_PROPERTY(QString  rtspVideoSource         READ rtspVideoSource        CONSTANT)
+    Q_PROPERTY(QString  udp264VideoSource       READ udp264VideoSource      CONSTANT)
+    Q_PROPERTY(QString  udp265VideoSource       READ udp265VideoSource      CONSTANT)
+    Q_PROPERTY(QString  tcpVideoSource          READ tcpVideoSource         CONSTANT)
+    Q_PROPERTY(QString  mpegtsVideoSource       READ mpegtsVideoSource      CONSTANT)
+    Q_PROPERTY(QString  disabledVideoSource     READ disabledVideoSource      CONSTANT)
 
-    static const char* videoSettingsGroupName;
-
-    static const char* videoSourceName;
-    static const char* udpPortName;
-    static const char* rtspUrlName;
-    static const char* videoAspectRatioName;
-    static const char* videoGridLinesName;
-    static const char* showRecControlName;
-    static const char* recordingFormatName;
-    static const char* maxVideoSizeName;
+    bool     streamConfigured       ();
+    QString  rtspVideoSource        () { return videoSourceRTSP; }
+    QString  udp264VideoSource      () { return videoSourceUDPH264; }
+    QString  udp265VideoSource      () { return videoSourceUDPH265; }
+    QString  tcpVideoSource         () { return videoSourceTCP; }
+    QString  mpegtsVideoSource      () { return videoSourceMPEGTS; }
+    QString  disabledVideoSource    () { return videoDisabled; }
 
     static const char* videoSourceNoVideo;
     static const char* videoDisabled;
-    static const char* videoSourceUDP;
+    static const char* videoSourceUDPH264;
+    static const char* videoSourceUDPH265;
     static const char* videoSourceRTSP;
+    static const char* videoSourceTCP;
+    static const char* videoSourceMPEGTS;
+
+signals:
+    void streamConfiguredChanged    ();
+
+private slots:
+    void _configChanged             (QVariant value);
 
 private:
-    SettingsFact* _videoSourceFact;
-    SettingsFact* _udpPortFact;
-    SettingsFact* _rtspUrlFact;
-    SettingsFact* _videoAspectRatioFact;
-    SettingsFact* _gridLinesFact;
-    SettingsFact* _showRecControlFact;
-    SettingsFact* _recordingFormatFact;
-    SettingsFact* _maxVideoSizeFact;
+    void _setDefaults               ();
+
+private:
+    bool _noVideo = false;
+
 };
 
 #endif

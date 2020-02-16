@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -20,13 +20,12 @@
 
 #include "QGCMAVLink.h"
 #include "QGC.h"
-#include "MavlinkQmlSingleton.h"
 #include "QmlObjectListModel.h"
 #include "Fact.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
 
-class SurveyMissionItem;
+class SurveyComplexItem;
 class SimpleMissionItem;
 class MissionController;
 #ifdef UNITTEST_BUILD
@@ -39,7 +38,7 @@ class MissionItem : public QObject
     Q_OBJECT
     
 public:
-    MissionItem(QObject* parent = NULL);
+    MissionItem(QObject* parent = nullptr);
 
     MissionItem(int             sequenceNumber,
                 MAV_CMD         command,
@@ -53,9 +52,9 @@ public:
                 double          param7,
                 bool            autoContinue,
                 bool            isCurrentItem,
-                QObject*        parent = NULL);
+                QObject*        parent = nullptr);
 
-    MissionItem(const MissionItem& other, QObject* parent = NULL);
+    MissionItem(const MissionItem& other, QObject* parent = nullptr);
 
     ~MissionItem();
 
@@ -82,6 +81,9 @@ public:
     /// @return Flight gimbal yaw change value if this item supports it. If not it returns NaN.
     double specifiedGimbalYaw(void) const;
 
+    /// @return Flight gimbal pitch change value if this item supports it. If not it returns NaN.
+    double specifiedGimbalPitch(void) const;
+
     void setCommand         (MAV_CMD command);
     void setSequenceNumber  (int sequenceNumber);
     void setIsCurrentItem   (bool isCurrentItem);
@@ -94,7 +96,6 @@ public:
     void setParam5          (double param5);
     void setParam6          (double param6);
     void setParam7          (double param7);
-    void setCoordinate      (const QGeoCoordinate& coordinate);
     
     void save(QJsonObject& json) const;
     bool load(QTextStream &loadStream);
@@ -107,10 +108,12 @@ signals:
     void sequenceNumberChanged      (int sequenceNumber);
     void specifiedFlightSpeedChanged(double flightSpeed);
     void specifiedGimbalYawChanged  (double gimbalYaw);
+    void specifiedGimbalPitchChanged(double gimbalPitch);
 
 private slots:
-    void _param2Changed         (QVariant value);
-    void _param3Changed         (QVariant value);
+    void _param1Changed(QVariant value);
+    void _param2Changed(QVariant value);
+    void _param3Changed(QVariant value);
 
 private:
     bool _convertJsonV1ToV2(const QJsonObject& json, QJsonObject& v2Json, QString& errorString);
@@ -147,7 +150,7 @@ private:
     static const char*  _jsonParam3Key;
     static const char*  _jsonParam4Key;
 
-    friend class SurveyMissionItem;
+    friend class SurveyComplexItem;
     friend class SimpleMissionItem;
     friend class MissionController;
 #ifdef UNITTEST_BUILD

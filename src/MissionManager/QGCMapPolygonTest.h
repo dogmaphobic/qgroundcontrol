@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -14,7 +14,6 @@
 #include "QGCMapPolygon.h"
 #include "QmlObjectListModel.h"
 
-/// Unit test for SurveyMissionItem
 class QGCMapPolygonTest : public UnitTest
 {
     Q_OBJECT
@@ -29,6 +28,7 @@ protected:
 private slots:
     void _testDirty(void);
     void _testVertexManipulation(void);
+    void _testKMLLoad(void);
 
 private:
     enum {

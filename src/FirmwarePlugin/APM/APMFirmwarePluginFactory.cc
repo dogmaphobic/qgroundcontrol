@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -16,10 +16,10 @@
 APMFirmwarePluginFactory APMFirmwarePluginFactory;
 
 APMFirmwarePluginFactory::APMFirmwarePluginFactory(void)
-    : _arduCopterPluginInstance(NULL)
-    , _arduPlanePluginInstance(NULL)
-    , _arduRoverPluginInstance(NULL)
-    , _arduSubPluginInstance(NULL)
+    : _arduCopterPluginInstance(nullptr)
+    , _arduPlanePluginInstance(nullptr)
+    , _arduRoverPluginInstance(nullptr)
+    , _arduSubPluginInstance(nullptr)
 {
 
 }
@@ -46,6 +46,13 @@ FirmwarePlugin* APMFirmwarePluginFactory::firmwarePluginForAutopilot(MAV_AUTOPIL
                 _arduCopterPluginInstance = new ArduCopterFirmwarePlugin;
             }
             return _arduCopterPluginInstance;
+        case MAV_TYPE_VTOL_DUOROTOR:
+        case MAV_TYPE_VTOL_QUADROTOR:
+        case MAV_TYPE_VTOL_TILTROTOR:
+        case MAV_TYPE_VTOL_RESERVED2:
+        case MAV_TYPE_VTOL_RESERVED3:
+        case MAV_TYPE_VTOL_RESERVED4:
+        case MAV_TYPE_VTOL_RESERVED5:
         case MAV_TYPE_FIXED_WING:
             if (!_arduPlanePluginInstance) {
                 _arduPlanePluginInstance = new ArduPlaneFirmwarePlugin;
@@ -67,5 +74,5 @@ FirmwarePlugin* APMFirmwarePluginFactory::firmwarePluginForAutopilot(MAV_AUTOPIL
         }
     }
 
-    return NULL;
+    return nullptr;
 }

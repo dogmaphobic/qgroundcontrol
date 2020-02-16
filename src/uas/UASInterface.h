@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,8 +11,7 @@
 // UASInterface, UAS.h/cc are deprecated. All new functionality should go into Vehicle.h/cc
 //
 
-#ifndef _UASINTERFACE_H_
-#define _UASINTERFACE_H_
+#pragma once
 
 #include <QObject>
 #include <QList>
@@ -21,7 +20,6 @@
 #include <QPointer>
 
 #include "LinkInterface.h"
-#include "ProtocolInterface.h"
 
 #ifndef __mobile__
 class FileManager;
@@ -45,59 +43,9 @@ public:
     /** @brief The time interval the robot is switched on **/
     virtual quint64 getUptime() const = 0;
 
-    virtual double getRoll() const = 0;
-    virtual double getPitch() const = 0;
-    virtual double getYaw() const = 0;
-
 #ifndef __mobile__
     virtual FileManager* getFileManager() = 0;
 #endif
-
-    /**
-     * @brief Get the color for this UAS
-     *
-     * This static function holds a color map that allows to draw a new color for each robot
-     *
-     * @return The next color in the color map. The map holds 20 colors and starts from the beginning
-     *         if the colors are exceeded.
-     */
-    static QColor getNextColor() {
-        /* Create color map */
-        static QList<QColor> colors = QList<QColor>()
-        << QColor(231,72,28)
-        << QColor(104,64,240)
-        << QColor(203,254,121)
-        << QColor(161,252,116)
-                << QColor(232,33,47)
-        << QColor(116,251,110)
-        << QColor(234,38,107)
-        << QColor(104,250,138)
-                << QColor(235,43,165)
-        << QColor(98,248,176)
-        << QColor(236,48,221)
-        << QColor(92,247,217)
-                << QColor(200,54,238)
-        << QColor(87,231,246)
-        << QColor(151,59,239)
-        << QColor(81,183,244)
-                << QColor(75,133,243)
-        << QColor(242,255,128)
-        << QColor(230,126,23);
-
-        static int nextColor = -1;
-        if(nextColor == 18){//if at the end of the list
-            nextColor = -1;//go back to the beginning
-        }
-        nextColor++;
-        return colors[nextColor];//return the next color
-   }
-
-    virtual QMap<int, QString> getComponents() = 0;
-
-    QColor getColor()
-    {
-        return color;
-    }
 
     enum StartCalibrationType {
         StartCalibrationRadio,
@@ -158,28 +106,7 @@ public slots:
     /** @brief Send command to disable all bindings/maps between RC and parameters */
     virtual void unsetRCToParameterMap() = 0;
 
-protected:
-    QColor color;
-
 signals:
-    /** @brief A text message from the system has been received */
-    void textMessageReceived(int uasid, int componentid, int severity, QString text);
-
-    /**
-     * @brief Update the error count of a device
-     *
-     * The error count indicates how many errors occurred during the use of a device.
-     * Usually a random error from time to time is acceptable, e.g. through electromagnetic
-     * interferences on device lines like I2C and SPI. A constantly and rapidly increasing
-     * error count however can help to identify broken cables or misbehaving drivers.
-     *
-     * @param uasid System ID
-     * @param component Name of the component, e.g. "IMU"
-     * @param device Name of the device, e.g. "SPI0" or "I2C1"
-     * @param count Errors occurred since system startup
-     */
-    void errCountChanged(int uasid, QString component, QString device, int count);
-
     /** @brief The robot is connected **/
     void connected();
     /** @brief The robot is disconnected **/
@@ -211,8 +138,6 @@ signals:
      */
     void batteryChanged(UASInterface* uas, double voltage, double current, double percent, int seconds);
     void statusChanged(UASInterface* uas, QString status);
-    void attitudeChanged(UASInterface*, double roll, double pitch, double yaw, quint64 usec);
-    void attitudeChanged(UASInterface*, int component, double roll, double pitch, double yaw, quint64 usec);
 
     void imageStarted(int imgid, int width, int height, int depth, int channels);
     void imageDataReceived(int imgid, const unsigned char* imageData, int length, int startIndex);
@@ -248,4 +173,3 @@ signals:
 
 Q_DECLARE_INTERFACE(UASInterface, "org.qgroundcontrol/1.0")
 
-#endif // _UASINTERFACE_H_

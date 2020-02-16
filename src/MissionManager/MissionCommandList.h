@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -14,7 +14,6 @@
 #include "QGCMAVLink.h"
 #include "QGCLoggingCategory.h"
 #include "QmlObjectListModel.h"
-#include "MavlinkQmlSingleton.h"
 
 #include <QObject>
 #include <QString>
@@ -31,7 +30,7 @@ class MissionCommandList : public QObject
 public:
     /// @param jsonFilename Json file which contains commands
     /// @param baseCommandList true: bottomost level of mission command hierarchy (partial not allowed), false: mid-level of command hierarchy
-    MissionCommandList(const QString& jsonFilename, bool baseCommandList, QObject* parent = NULL);
+    MissionCommandList(const QString& jsonFilename, bool baseCommandList, QObject* parent = nullptr);
 
     /// Returns list of categories in this list
     QStringList& categories(void) { return _categories; }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -12,7 +12,6 @@
 ///     @author Don Gagne <don@thegagnes.com>
 
 #include "AirframeComponent.h"
-#include "QGCQmlWidgetHolder.h"
 #include "ParameterManager.h"
 
 AirframeComponent::AirframeComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent) :
@@ -29,7 +28,7 @@ QString AirframeComponent::name(void) const
 
 QString AirframeComponent::description(void) const
 {
-    return tr("Airframe Setup is used to select the airframe which matches your vehicle. "
+    return tr("Airframe Setup is used to select the airframe that matches your vehicle. "
               "This will in turn set up the various tuning values for flight parameters.");
 }
 
@@ -45,12 +44,12 @@ bool AirframeComponent::requiresSetup(void) const
 
 bool AirframeComponent::setupComplete(void) const
 {
-    return _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, "SYS_AUTOSTART")->rawValue().toInt() != 0;
+    return _vehicle->parameterManager()->getParameter(FactSystem::defaultComponentId, QStringLiteral("SYS_AUTOSTART"))->rawValue().toInt() != 0;
 }
 
 QStringList AirframeComponent::setupCompleteChangedTriggerList(void) const
 {
-    return QStringList("SYS_AUTOSTART");
+    return QStringList(QStringLiteral("SYS_AUTOSTART"));
 }
 
 QUrl AirframeComponent::setupSource(void) const

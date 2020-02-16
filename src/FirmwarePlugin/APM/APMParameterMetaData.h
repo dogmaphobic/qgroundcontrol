@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -32,6 +32,7 @@ public:
     { }
 
     QString name;
+    QString category;
     QString group;
     QString shortDescription;
     QString longDescription;
@@ -79,6 +80,7 @@ private:
     bool parseParameterAttributes(QXmlStreamReader& xml, APMFactMetaDataRaw *rawMetaData);
     void correctGroupMemberships(ParameterNametoFactMetaDataMap& parameterToFactMetaDataMap, QMap<QString,QStringList>& groupMembers);
     QString mavTypeToString(MAV_TYPE vehicleTypeEnum);
+    QString _groupFromParameterName(const QString& name);
 
     bool _parameterMetaDataLoaded;   ///< true: parameter meta data already loaded
     QMap<QString, ParameterNametoFactMetaDataMap> _vehicleTypeToParametersMap; ///< Maps from a vehicle type to paramametertoFactMeta map>

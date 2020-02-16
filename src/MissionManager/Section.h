@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -21,7 +21,7 @@ class Section : public QObject
     Q_OBJECT
 
 public:
-    Section(Vehicle* vehicle, QObject* parent = NULL)
+    Section(Vehicle* vehicle, QObject* parent = nullptr)
         : QObject(parent)
         , _vehicle(vehicle)
     {

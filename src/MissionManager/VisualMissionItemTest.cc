@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -12,7 +12,7 @@
 #include "QGCApplication.h"
 
 VisualMissionItemTest::VisualMissionItemTest(void)
-    : _offlineVehicle(NULL)
+    : _offlineVehicle(nullptr)
 {
     
 }
@@ -43,6 +43,7 @@ void VisualMissionItemTest::init(void)
     rgVisualItemSignals[specifiesAltitudeOnlyChangedIndex] =                SIGNAL(specifiesAltitudeOnlyChanged());
     rgVisualItemSignals[specifiedFlightSpeedChangedIndex] =                 SIGNAL(specifiedFlightSpeedChanged());
     rgVisualItemSignals[specifiedGimbalYawChangedIndex] =                   SIGNAL(specifiedGimbalYawChanged());
+    rgVisualItemSignals[specifiedGimbalPitchChangedIndex] =                 SIGNAL(specifiedGimbalPitchChanged());
     rgVisualItemSignals[lastSequenceNumberChangedIndex] =                   SIGNAL(lastSequenceNumberChanged(int));
     rgVisualItemSignals[missionGimbalYawChangedIndex] =                     SIGNAL(missionGimbalYawChanged(double));
     rgVisualItemSignals[missionVehicleYawChangedIndex] =                    SIGNAL(missionVehicleYawChanged(double));
@@ -53,13 +54,13 @@ void VisualMissionItemTest::init(void)
 
 void VisualMissionItemTest::cleanup(void)
 {
-    delete _offlineVehicle;
+    _offlineVehicle->deleteLater();
     UnitTest::cleanup();
 }
 
 void VisualMissionItemTest::_createSpy(SimpleMissionItem* simpleItem, MultiSignalSpy** visualSpy)
 {
-    *visualSpy = NULL;
+    *visualSpy = nullptr;
     MultiSignalSpy* spy = new MultiSignalSpy();
     QCOMPARE(spy->init(simpleItem, rgVisualItemSignals, cVisualItemSignals), true);
     *visualSpy = spy;

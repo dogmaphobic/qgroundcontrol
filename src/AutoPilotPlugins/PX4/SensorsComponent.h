@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -22,7 +22,7 @@ class SensorsComponent : public VehicleComponent
     Q_OBJECT
     
 public:
-    SensorsComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent = NULL);
+    SensorsComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent = nullptr);
     
     // Virtuals from VehicleComponent
     QStringList setupCompleteChangedTriggerList(void) const override;
@@ -41,8 +41,12 @@ private:
     QVariantList    _summaryItems;
     QStringList     _deviceIds;
 
-    static const char* _airspeedBreaker;
-    static const char* _airspeedCal;
+    static const char* _airspeedDisabledParam;
+    static const char* _airspeedBreakerParam;
+    static const char* _airspeedCalParam;
+
+    static const char* _magEnabledParam;
+    static const char* _magCalParam;
 };
 
 #endif

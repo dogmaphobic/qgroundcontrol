@@ -1,16 +1,14 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-
-import QtQuick          2.3
-import QtQuick.Controls 1.2
-import QtQuick.Layouts  1.2
+import QtQuick          2.11
+import QtQuick.Layouts  1.11
 
 import QGroundControl                       1.0
 import QGroundControl.Controls              1.0
@@ -21,10 +19,12 @@ import QGroundControl.Palette               1.0
 //-------------------------------------------------------------------------
 //-- GPS Indicator
 Item {
-    id:             satelitte
+    id:             _root
     width:          (gpsValuesColumn.x + gpsValuesColumn.width) * 1.1
     anchors.top:    parent.top
     anchors.bottom: parent.bottom
+
+    property bool showIndicator: true
 
     Component {
         id: gpsInfo
@@ -70,12 +70,6 @@ Item {
                     QGCLabel { text: activeVehicle ? activeVehicle.gps.courseOverGround.valueString : qsTr("--.--", "No data to display") }
                 }
             }
-
-            Component.onCompleted: {
-                var pos = mapFromItem(toolBar, centerX - (width / 2), toolBar.height)
-                x = pos.x
-                y = pos.y + ScreenTools.defaultFontPixelHeight
-            }
         }
     }
 
@@ -111,12 +105,11 @@ Item {
             text:       activeVehicle ? activeVehicle.gps.hdop.value.toFixed(1) : ""
         }
     }
-    
+
     MouseArea {
         anchors.fill:   parent
         onClicked: {
-            var centerX = mapToItem(toolBar, x, y).x + (width / 2)
-            mainWindow.showPopUp(gpsInfo, centerX)
+            mainWindow.showPopUp(_root, gpsInfo)
         }
     }
 }

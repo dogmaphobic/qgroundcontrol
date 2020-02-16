@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -22,261 +22,197 @@ import QGroundControl.ScreenTools   1.0
 
 SetupPage {
     id:             airframePage
-    pageComponent:  _useOldFrameParam ?  oldFramePageComponent: newFramePageComponent
-
-    property real _margins:             ScreenTools.defaultFontPixelWidth
-    property bool _useOldFrameParam:    controller.parameterExists(-1, "FRAME")
-    property Fact _oldFrameParam:       controller.getParameterFact(-1, "FRAME", false)
-    property Fact _newFrameParam:       controller.getParameterFact(-1, "FRAME_CLASS", false)
-    property Fact _frameTypeParam:      controller.getParameterFact(-1, "FRAME_TYPE", false)
-    property var  _flatParamList:       ListModel {
-        ListElement {
-            name: "3DR Aero M"
-            file: "3DR_AERO_M.param"
-        }
-        ListElement {
-            name: "3DR Aero RTF"
-            file: "3DR_Aero_RTF.param"
-        }
-        ListElement {
-            name: "3DR Rover"
-            file: "3DR_Rover.param"
-        }
-        ListElement {
-            name: "3DR Tarot"
-            file: "3DR_Tarot.bgsc"
-        }
-        ListElement {
-            name: "Parrot Bebop"
-            file: "Parrot_Bebop.param"
-        }
-        ListElement {
-            name: "Storm32"
-            file: "SToRM32-MAVLink.param"
-        }
-        ListElement {
-            name: "3DR X8-M RTF"
-            file: "3DR_X8-M_RTF.param"
-        }
-        ListElement {
-            name: "3DR Y6A"
-            file: "3DR_Y6A_RTF.param"
-        }
-        ListElement {
-            name: "3DR X8+ RTF"
-            file: "3DR_X8+_RTF.param"
-        }
-        ListElement {
-            name: "3DR QUAD X4 RTF"
-            file: "3DR_QUAD_X4_RTF.param"
-        }
-        ListElement {
-            name: "3DR X8"
-            file: "3DR_X8_RTF.param"
-        }
-        ListElement {
-            name: "Iris with GoPro"
-            file: "Iris with Front Mount Go Pro.param"
-        }
-        ListElement {
-            name: "Iris with Tarot"
-            file: "Iris with Tarot Gimbal.param"
-        }
-        ListElement {
-            name: "3DR Iris+"
-            file: "3DR_Iris+.param"
-        }
-        ListElement {
-            name: "Iris"
-            file: "Iris.param"
-        }
-        ListElement {
-            name: "3DR Y6B"
-            file: "3DR_Y6B_RTF.param"
-        }
-    }
-
-
-    APMAirframeComponentController {
-        id:         controller
-        factPanel:  airframePage.viewPanel
-    }
-
-    ExclusiveGroup {
-        id: airframeTypeExclusive
-    }
+    pageComponent:  pageComponent
 
     Component {
-        id: applyRestartDialogComponent
+        id: pageComponent
 
-        QGCViewDialog {
-            id: applyRestartDialog
+        ColumnLayout {
+            id:     mainColumn
+            width:  availableWidth
 
-            Connections {
-                target: controller
-                onCurrentAirframeTypeChanged: {
-                    airframePicker.model = controller.currentAirframeType.airframes;
+            property real _minW:                ScreenTools.defaultFontPixelWidth * 20
+            property real _boxWidth:            _minW
+            property real _boxSpace:            ScreenTools.defaultFontPixelWidth
+            property real _margins:             ScreenTools.defaultFontPixelWidth
+            property Fact _frameClass:          controller.getParameterFact(-1, "FRAME_CLASS")
+            property Fact _frameType:           controller.getParameterFact(-1, "FRAME_TYPE", false)    // FRAME_TYPE is not available on all Rover versions
+            property bool _frameTypeAvailable:  controller.parameterExists(-1, "FRAME_TYPE")
+
+            readonly property real spacerHeight: ScreenTools.defaultFontPixelHeight
+
+            onWidthChanged:         computeDimensions()
+            Component.onCompleted:  computeDimensions()
+
+            function computeDimensions() {
+                var sw  = 0
+                var rw  = 0
+                var idx = Math.floor(mainColumn.width / (_minW + ScreenTools.defaultFontPixelWidth))
+                if(idx < 1) {
+                    _boxWidth = mainColumn.width
+                    _boxSpace = 0
+                } else {
+                    _boxSpace = 0
+                    if(idx > 1) {
+                        _boxSpace = ScreenTools.defaultFontPixelWidth
+                        sw = _boxSpace * (idx - 1)
+                    }
+                    rw = mainColumn.width - sw
+                    _boxWidth = rw / idx
                 }
             }
 
+            APMAirframeComponentController { id: controller; }
+
             QGCLabel {
-                id:                 applyParamsText
-                anchors.top:        parent.top
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                anchors.margins:    _margins
+                id:                 helpText
+                Layout.fillWidth:   true
+                text:               (_frameClass.rawValue === 0 ?
+                                         qsTr("Airframe is currently not set.") :
+                                         qsTr("Currently set to frame class '%1'").arg(_frameClass.enumStringValue) +
+                                         (_frameTypeAvailable ?  qsTr(" and frame type '%2'").arg(_frameType.enumStringValue) : "") +
+                                         qsTr(".", "period for end of sentence")) +
+                                    qsTr(" To change this configuration, select the desired frame class below and frame type.")
+                font.family:        ScreenTools.demiboldFontFamily
                 wrapMode:           Text.WordWrap
-                text:               qsTr("Select your drone to load the default parameters for it. ")
+            }
+
+            Item {
+                id:             lastSpacer
+                height:         parent.spacerHeight
+                width:          10
             }
 
             Flow {
-                anchors.margins:    _margins
-                anchors.top:        applyParamsText.bottom
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                anchors.bottom:     parent.bottom
-                spacing :           _margins
-                layoutDirection:    Qt.Vertical;
+                id:                 flowView
+                Layout.fillWidth:   true
+                spacing:            _boxSpace
+
+                ExclusiveGroup {
+                    id: airframeTypeExclusive
+                }
 
                 Repeater {
-                    id:     airframePicker
-                    model:  controller.currentAirframeType.airframes;
+                    model: controller.frameClassModel
 
-                    delegate: QGCButton {
-                        id:     btnParams
-                        width:  parent.width / 2.1
-                        height: (ScreenTools.defaultFontPixelHeight * 14) / 5
-                        text:   controller.currentAirframeType.airframes[index].name;
+                    // Outer summary item rectangle
+                    Rectangle {
+                        id:     outerRect
+                        width:  _boxWidth
+                        height: ScreenTools.defaultFontPixelHeight * 14
+                        color:  qgcPal.window
 
-                        onClicked : {
-                            controller.loadParameters(controller.currentAirframeType.airframes[index].params)
-                            hideDialog()
+                        readonly property real titleHeight: ScreenTools.defaultFontPixelHeight * 1.75
+                        readonly property real innerMargin: ScreenTools.defaultFontPixelWidth
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (!airframeCheckBox.checked || !combo.valid) {
+                                    if (_frameTypeAvailable && object.defaultFrameType != -1) {
+                                        _frameType.rawValue = object.defaultFrameType
+                                    }
+                                    airframeCheckBox.checked = true
+                                }
+                            }
+                        }
+
+                        QGCLabel {
+                            id:     title
+                            text:   object.name
+                        }
+
+                        Rectangle {
+                            id:                 imageComboRect
+                            anchors.topMargin:  ScreenTools.defaultFontPixelHeight / 2
+                            anchors.top:        title.bottom
+                            anchors.bottom:     parent.bottom
+                            anchors.left:       parent.left
+                            anchors.right:      parent.right
+                            color:              airframeCheckBox.checked ? qgcPal.buttonHighlight : qgcPal.windowShade
+                            opacity:            combo.valid ? 1.0 : 0.5
+
+                            ColumnLayout {
+                                anchors.margins:    innerMargin
+                                anchors.fill:       parent
+                                spacing:            innerMargin
+
+                                Image {
+                                    id:                 image
+                                    Layout.fillWidth:   true
+                                    Layout.fillHeight:  true
+                                    fillMode:           Image.PreserveAspectFit
+                                    smooth:             true
+                                    antialiasing:       true
+                                    sourceSize.width:   width
+                                    source:             airframeCheckBox.checked ? object.imageResource : object.imageResourceDefault
+                                }
+
+                                QGCCheckBox {
+                                    // Although this item is invisible we still use it to manage state
+                                    id:             airframeCheckBox
+                                    checked:        object.frameClass === _frameClass.rawValue
+                                    exclusiveGroup: airframeTypeExclusive
+                                    visible:        false
+
+                                    onCheckedChanged: {
+                                        if (checked) {
+                                            _frameClass.rawValue = object.frameClass
+                                        }
+                                    }
+                                }
+
+                                QGCLabel {
+                                    text:           qsTr("Frame Type")
+                                    font.pointSize: ScreenTools.smallFontPointSize
+                                    color:          qgcPal.buttonHighlightText
+                                    visible:        airframeCheckBox.checked && object.frameTypeSupported
+                                }
+
+                                QGCComboBox {
+                                    id:                 combo
+                                    Layout.fillWidth:   true
+                                    model:              object.frameTypeEnumStrings
+                                    visible:            airframeCheckBox.checked && object.frameTypeSupported
+                                    onActivated:        _frameType.rawValue = object.frameTypeEnumValues[index]
+
+                                    property bool valid: true
+
+                                    function checkFrameType(value) {
+                                        return value == _frameType.rawValue
+                                    }
+
+                                    function selectFrameType() {
+                                        var index = object.frameTypeEnumValues.findIndex(checkFrameType)
+                                        if (index == -1 && combo.visible) {
+                                            // Frame Class/Type is set to an invalid combination
+                                            combo.valid = false
+                                        } else {
+                                            combo.currentIndex = index
+                                            combo.valid = true
+                                        }
+                                    }
+
+                                    Component.onCompleted: selectFrameType()
+
+                                    Connections {
+                                        target:                 _frameTypeAvailable ? _frameType : null
+                                        ignoreUnknownSignals:   true
+                                        onRawValueChanged:      combo.selectFrameType()
+                                    }
+                                }
+                            }
+                        }
+
+                        QGCLabel {
+                            anchors.fill:   imageComboRect
+                            text:           qsTr("Invalid setting for FRAME_TYPE. Click to Reset.")
+                            wrapMode:       Text.WordWrap
+                            visible:        !combo.valid
                         }
                     }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: selectParamFileDialogComponent
-
-        QGCViewDialog {
-            QGCLabel {
-                id:                 applyParamsText
-                anchors.top:        parent.top
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                anchors.margins:    _margins
-                wrapMode:           Text.WordWrap
-                text:               qsTr("Select your drone to load the default parameters for it. ")
-            }
-
-            Flow {
-                anchors.margins:    _margins
-                anchors.top:        applyParamsText.bottom
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                anchors.bottom:     parent.bottom
-                spacing :           _margins
-                layoutDirection:    Qt.Vertical;
-
-                Repeater {
-                    id:     airframePicker
-                    model:  _flatParamList
-
-                    delegate: QGCButton {
-                        width:  parent.width / 2.1
-                        height: (ScreenTools.defaultFontPixelHeight * 14) / 5
-                        text:   name
-
-                        onClicked : {
-                            controller.loadParameters(file)
-                            hideDialog()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Component {
-        id: oldFramePageComponent
-
-        Column {
-            width:      availableWidth
-            height:     1000
-            spacing:    _margins
-
-            RowLayout {
-                anchors.left:   parent.left
-                anchors.right:  parent.right
-                spacing:        _margins
-
-                QGCLabel {
-                    font.pointSize:     ScreenTools.mediumFontPointSize
-                    wrapMode:           Text.WordWrap
-                    text:               qsTr("Please select your airframe type")
-                    Layout.fillWidth:   true
-                }
-
-                QGCButton {
-                    text:       qsTr("Load common parameters")
-                    onClicked:  showDialog(applyRestartDialogComponent, qsTr("Load common parameters"), qgcView.showDialogDefaultWidth, StandardButton.Close)
-                }
-            }
-
-            Repeater {
-                model: controller.airframeTypesModel
-
-                QGCRadioButton {
-                    text: object.name
-                    checked: controller.currentAirframeType == object
-                    exclusiveGroup: airframeTypeExclusive
-
-                    onCheckedChanged: {
-                        if (checked) {
-                            controller.currentAirframeType = object
-                        }
-                    }
-                }
-            }
+                } // Repeater - summary boxes
+            } // Flow - summary boxes
         } // Column
-    } // Component - oldFramePageComponent
-
-    Component {
-        id: newFramePageComponent
-
-        Grid {
-            anchors.left:   parent.left
-            anchors.right:  parent.right
-            spacing:        _margins
-            columns:        2
-
-            QGCLabel {
-                text:               qsTr("Frame Class:")
-            }
-
-            FactComboBox {
-                fact:       _newFrameParam
-                indexModel: false
-                width:      ScreenTools.defaultFontPixelWidth * 15
-            }
-
-            QGCLabel {
-                text:               qsTr("Frame Type:")
-            }
-
-            FactComboBox {
-                fact:       _frameTypeParam
-                indexModel: false
-                width:      ScreenTools.defaultFontPixelWidth * 15
-            }
-
-            QGCButton {
-                text:       qsTr("Load common parameters")
-                onClicked:  showDialog(selectParamFileDialogComponent, qsTr("Load common parameters"), qgcView.showDialogDefaultWidth, StandardButton.Close)
-            }
-        }
-    }
+    } // Component
 } // SetupPage

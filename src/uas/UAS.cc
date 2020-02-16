@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -26,7 +26,6 @@
 #include "UAS.h"
 #include "LinkInterface.h"
 #include "QGC.h"
-#include "GAudioOutput.h"
 #include "MAVLinkProtocol.h"
 #include "QGCMAVLink.h"
 #include "LinkManager.h"
@@ -60,10 +59,6 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle, FirmwarePluginManager * fi
     controlPitchManual(true),
     controlYawManual(true),
     controlThrustManual(true),
-    manualRollAngle(0),
-    manualPitchAngle(0),
-    manualYawAngle(0),
-    manualThrust(0),
 
 #ifndef __mobile__
     fileManager(this, vehicle),
@@ -72,10 +67,6 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle, FirmwarePluginManager * fi
     attitudeKnown(false),
     attitudeStamped(false),
     lastAttitude(0),
-
-    roll(0.0),
-    pitch(0.0),
-    yaw(0.0),
 
     imagePackets(0),    // We must initialize to 0, otherwise extended data packets maybe incorrectly thought to be images
 
@@ -133,7 +124,6 @@ UAS::UAS(MAVLinkProtocol* protocol, Vehicle* vehicle, FirmwarePluginManager * fi
 
 #ifndef __mobile__
     connect(_vehicle, &Vehicle::mavlinkMessageReceived, &fileManager, &FileManager::receiveMessage);
-    color = UASInterface::getNextColor();
 #endif
 
 }
@@ -148,47 +138,11 @@ int UAS::getUASID() const
 
 void UAS::receiveMessage(mavlink_message_t message)
 {
-    if (!components.contains(message.compid))
-    {
-        QString componentName;
-
-        switch (message.compid)
-        {
-        case MAV_COMP_ID_ALL:
-        {
-            componentName = "ANONYMOUS";
-            break;
-        }
-        case MAV_COMP_ID_IMU:
-        {
-            componentName = "IMU #1";
-            break;
-        }
-        case MAV_COMP_ID_CAMERA:
-        {
-            componentName = "CAMERA";
-            break;
-        }
-        case MAV_COMP_ID_MISSIONPLANNER:
-        {
-            componentName = "MISSIONPLANNER";
-            break;
-        }
-        }
-
-        components.insert(message.compid, componentName);
-    }
-
-    //    qDebug() << "UAS RECEIVED from" << message.sysid << "component" << message.compid << "msg id" << message.msgid << "seq no" << message.seq;
-
     // Only accept messages from this system (condition 1)
     // and only then if a) attitudeStamped is disabled OR b) attitudeStamped is enabled
     // and we already got one attitude packet
-    if (message.sysid == uasId && (!attitudeStamped || (attitudeStamped && (lastAttitude != 0)) || message.msgid == MAVLINK_MSG_ID_ATTITUDE))
+    if (message.sysid == uasId && (!attitudeStamped || lastAttitude != 0 || message.msgid == MAVLINK_MSG_ID_ATTITUDE))
     {
-        QString uasState;
-        QString stateDescription;
-
         bool multiComponentSourceDetected = false;
         bool wrongComponent = false;
 
@@ -275,112 +229,11 @@ void UAS::receiveMessage(mavlink_message_t message)
             emit valueChanged(uasId, name.arg("drop_rate_comm"), "%", state.drop_rate_comm/100.0f, time);
         }
             break;
-        case MAVLINK_MSG_ID_ATTITUDE:
-        {
-            mavlink_attitude_t attitude;
-            mavlink_msg_attitude_decode(&message, &attitude);
-            quint64 time = getUnixReferenceTime(attitude.time_boot_ms);
-
-            emit attitudeChanged(this, message.compid, QGC::limitAngleToPMPIf(attitude.roll), QGC::limitAngleToPMPIf(attitude.pitch), QGC::limitAngleToPMPIf(attitude.yaw), time);
-
-            if (!wrongComponent)
-            {
-                lastAttitude = time;
-                setRoll(QGC::limitAngleToPMPIf(attitude.roll));
-                setPitch(QGC::limitAngleToPMPIf(attitude.pitch));
-                setYaw(QGC::limitAngleToPMPIf(attitude.yaw));
-
-                attitudeKnown = true;
-                emit attitudeChanged(this, getRoll(), getPitch(), getYaw(), time);
-            }
-        }
-            break;
-        case MAVLINK_MSG_ID_ATTITUDE_QUATERNION:
-        {
-            mavlink_attitude_quaternion_t attitude;
-            mavlink_msg_attitude_quaternion_decode(&message, &attitude);
-            quint64 time = getUnixReferenceTime(attitude.time_boot_ms);
-
-            double a = attitude.q1;
-            double b = attitude.q2;
-            double c = attitude.q3;
-            double d = attitude.q4;
-
-            double aSq = a * a;
-            double bSq = b * b;
-            double cSq = c * c;
-            double dSq = d * d;
-            float dcm[3][3];
-            dcm[0][0] = aSq + bSq - cSq - dSq;
-            dcm[0][1] = 2.0 * (b * c - a * d);
-            dcm[0][2] = 2.0 * (a * c + b * d);
-            dcm[1][0] = 2.0 * (b * c + a * d);
-            dcm[1][1] = aSq - bSq + cSq - dSq;
-            dcm[1][2] = 2.0 * (c * d - a * b);
-            dcm[2][0] = 2.0 * (b * d - a * c);
-            dcm[2][1] = 2.0 * (a * b + c * d);
-            dcm[2][2] = aSq - bSq - cSq + dSq;
-
-            float phi, theta, psi;
-            theta = asin(-dcm[2][0]);
-
-            if (fabs(theta - M_PI_2) < 1.0e-3f) {
-                phi = 0.0f;
-                psi = (atan2(dcm[1][2] - dcm[0][1],
-                        dcm[0][2] + dcm[1][1]) + phi);
-
-            } else if (fabs(theta + M_PI_2) < 1.0e-3f) {
-                phi = 0.0f;
-                psi = atan2f(dcm[1][2] - dcm[0][1],
-                          dcm[0][2] + dcm[1][1] - phi);
-
-            } else {
-                phi = atan2f(dcm[2][1], dcm[2][2]);
-                psi = atan2f(dcm[1][0], dcm[0][0]);
-            }
-
-            emit attitudeChanged(this, message.compid, QGC::limitAngleToPMPIf(phi),
-                                 QGC::limitAngleToPMPIf(theta),
-                                 QGC::limitAngleToPMPIf(psi), time);
-
-            if (!wrongComponent)
-            {
-                lastAttitude = time;
-                setRoll(QGC::limitAngleToPMPIf(phi));
-                setPitch(QGC::limitAngleToPMPIf(theta));
-                setYaw(QGC::limitAngleToPMPIf(psi));
-
-                attitudeKnown = true;
-                emit attitudeChanged(this, getRoll(), getPitch(), getYaw(), time);
-            }
-        }
-            break;
         case MAVLINK_MSG_ID_HIL_CONTROLS:
         {
             mavlink_hil_controls_t hil;
             mavlink_msg_hil_controls_decode(&message, &hil);
             emit hilControlsChanged(hil.time_usec, hil.roll_ailerons, hil.pitch_elevator, hil.yaw_rudder, hil.throttle, hil.mode, hil.nav_mode);
-        }
-            break;
-        case MAVLINK_MSG_ID_VFR_HUD:
-        {
-            mavlink_vfr_hud_t hud;
-            mavlink_msg_vfr_hud_decode(&message, &hud);
-            quint64 time = getUnixTime();
-
-            if (!attitudeKnown)
-            {
-                setYaw(QGC::limitAngleToPMPId((((double)hud.heading)/180.0)*M_PI));
-                emit attitudeChanged(this, getRoll(), getPitch(), getYaw(), time);
-            }
-        }
-            break;
-        case MAVLINK_MSG_ID_GLOBAL_VISION_POSITION_ESTIMATE:
-        {
-            mavlink_global_vision_position_estimate_t pos;
-            mavlink_msg_global_vision_position_estimate_decode(&message, &pos);
-            quint64 time = getUnixTime(pos.usec);
-            emit attitudeChanged(this, message.compid, pos.roll, pos.pitch, pos.yaw, time);
         }
             break;
 
@@ -411,32 +264,6 @@ void UAS::receiveMessage(mavlink_message_t message)
             emit valueChanged(uasId, "roll sp", "rad", roll, time);
             emit valueChanged(uasId, "pitch sp", "rad", pitch, time);
             emit valueChanged(uasId, "yaw sp", "rad", yaw, time);
-        }
-            break;
-
-        case MAVLINK_MSG_ID_STATUSTEXT:
-        {
-            QByteArray b;
-            b.resize(MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN+1);
-            mavlink_msg_statustext_get_text(&message, b.data());
-
-            // Ensure NUL-termination
-            b[b.length()-1] = '\0';
-            QString text = QString(b);
-            int severity = mavlink_msg_statustext_get_severity(&message);
-
-        // If the message is NOTIFY or higher severity, or starts with a '#',
-        // then read it aloud.
-            if (text.startsWith("#") || severity <= MAV_SEVERITY_NOTICE)
-            {
-                text.remove("#");
-                emit textMessageReceived(uasId, message.compid, severity, text);
-                _say(text.toLower(), severity);
-            }
-            else
-            {
-                emit textMessageReceived(uasId, message.compid, severity, text);
-            }
         }
             break;
 
@@ -977,191 +804,145 @@ void UAS::processParamValueMsg(mavlink_message_t& msg, const QString& paramName,
 */
 void UAS::setExternalControlSetpoint(float roll, float pitch, float yaw, float thrust, quint16 buttons, int joystickMode)
 {
-    if (!_vehicle) {
+    if (!_vehicle || !_vehicle->priorityLink()) {
         return;
     }
-
-    if (!_vehicle->priorityLink()) {
-        return;
+    mavlink_message_t message;
+    if (joystickMode == Vehicle::JoystickModeAttitude) {
+        // send an external attitude setpoint command (rate control disabled)
+        float attitudeQuaternion[4];
+        mavlink_euler_to_quaternion(roll, pitch, yaw, attitudeQuaternion);
+        uint8_t typeMask = 0x7; // disable rate control
+        mavlink_msg_set_attitude_target_pack_chan(
+            mavlink->getSystemId(),
+            mavlink->getComponentId(),
+            _vehicle->priorityLink()->mavlinkChannel(),
+            &message,
+            QGC::groundTimeUsecs(),
+            this->uasId,
+            0,
+            typeMask,
+            attitudeQuaternion,
+            0,
+            0,
+            0,
+            thrust);
+    } else if (joystickMode == Vehicle::JoystickModePosition) {
+        // Send the the local position setpoint (local pos sp external message)
+        static float px = 0;
+        static float py = 0;
+        static float pz = 0;
+        //XXX: find decent scaling
+        px -= pitch;
+        py += roll;
+        pz -= 2.0f*(thrust-0.5);
+        uint16_t typeMask = (1<<11)|(7<<6)|(7<<3); // select only POSITION control
+        mavlink_msg_set_position_target_local_ned_pack_chan(
+            mavlink->getSystemId(),
+            mavlink->getComponentId(),
+            _vehicle->priorityLink()->mavlinkChannel(),
+            &message,
+            QGC::groundTimeUsecs(),
+            this->uasId,
+            0,
+            MAV_FRAME_LOCAL_NED,
+            typeMask,
+            px,
+            py,
+            pz,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            yaw,
+            0);
+    } else if (joystickMode == Vehicle::JoystickModeForce) {
+        // Send the the force setpoint (local pos sp external message)
+        float dcm[3][3];
+        mavlink_euler_to_dcm(roll, pitch, yaw, dcm);
+        const float fx = -dcm[0][2] * thrust;
+        const float fy = -dcm[1][2] * thrust;
+        const float fz = -dcm[2][2] * thrust;
+        uint16_t typeMask = (3<<10)|(7<<3)|(7<<0)|(1<<9); // select only FORCE control (disable everything else)
+        mavlink_msg_set_position_target_local_ned_pack_chan(
+            mavlink->getSystemId(),
+            mavlink->getComponentId(),
+            _vehicle->priorityLink()->mavlinkChannel(),
+            &message,
+            QGC::groundTimeUsecs(),
+            this->uasId,
+            0,
+            MAV_FRAME_LOCAL_NED,
+            typeMask,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            fx,
+            fy,
+            fz,
+            0,
+            0);
+    } else if (joystickMode == Vehicle::JoystickModeVelocity) {
+        // Send the the local velocity setpoint (local pos sp external message)
+        static float vx = 0;
+        static float vy = 0;
+        static float vz = 0;
+        static float yawrate = 0;
+        //XXX: find decent scaling
+        vx -= pitch;
+        vy += roll;
+        vz -= 2.0f*(thrust-0.5);
+        yawrate += yaw; //XXX: not sure what scale to apply here
+        uint16_t typeMask = (1<<10)|(7<<6)|(7<<0); // select only VELOCITY control
+        mavlink_msg_set_position_target_local_ned_pack_chan(
+            mavlink->getSystemId(),
+            mavlink->getComponentId(),
+            _vehicle->priorityLink()->mavlinkChannel(),
+            &message,
+            QGC::groundTimeUsecs(),
+            this->uasId,
+            0,
+            MAV_FRAME_LOCAL_NED,
+            typeMask,
+            0,
+            0,
+            0,
+            vx,
+            vy,
+            vz,
+            0,
+            0,
+            0,
+            0,
+            yawrate);
+    } else if (joystickMode == Vehicle::JoystickModeRC) {
+        // Store scaling values for all 3 axes
+        static const float axesScaling = 1.0 * 1000.0;
+        // Calculate the new commands for roll, pitch, yaw, and thrust
+        const float newRollCommand = roll * axesScaling;
+        // negate pitch value because pitch is negative for pitching forward but mavlink message argument is positive for forward
+        const float newPitchCommand  = -pitch * axesScaling;
+        const float newYawCommand    = yaw * axesScaling;
+        const float newThrustCommand = thrust * axesScaling;
+        // Send the MANUAL_COMMAND message
+        mavlink_msg_manual_control_pack_chan(
+            static_cast<uint8_t>(mavlink->getSystemId()),
+            static_cast<uint8_t>(mavlink->getComponentId()),
+            _vehicle->priorityLink()->mavlinkChannel(),
+            &message,
+            static_cast<uint8_t>(this->uasId),
+            static_cast<int16_t>(newPitchCommand),
+            static_cast<int16_t>(newRollCommand),
+            static_cast<int16_t>(newThrustCommand),
+            static_cast<int16_t>(newYawCommand),
+            buttons);
     }
-
-    // Store the previous manual commands
-    static float manualRollAngle = 0.0;
-    static float manualPitchAngle = 0.0;
-    static float manualYawAngle = 0.0;
-    static float manualThrust = 0.0;
-    static quint16 manualButtons = 0;
-    static quint8 countSinceLastTransmission = 0; // Track how many calls to this function have occurred since the last MAVLink transmission
-
-    // Transmit the external setpoints only if they've changed OR if it's been a little bit since they were last transmit. To make sure there aren't issues with
-    // response rate, we make sure that a message is transmit when the commands have changed, then one more time, and then switch to the lower transmission rate
-    // if no command inputs have changed.
-
-    // The default transmission rate is 25Hz, but when no inputs have changed it drops down to 5Hz.
-    bool sendCommand = false;
-    if (countSinceLastTransmission++ >= 5) {
-        sendCommand = true;
-        countSinceLastTransmission = 0;
-    } else if ((!qIsNaN(roll) && roll != manualRollAngle) || (!qIsNaN(pitch) && pitch != manualPitchAngle) ||
-             (!qIsNaN(yaw) && yaw != manualYawAngle) || (!qIsNaN(thrust) && thrust != manualThrust) ||
-             buttons != manualButtons) {
-        sendCommand = true;
-
-        // Ensure that another message will be sent the next time this function is called
-        countSinceLastTransmission = 10;
-    }
-
-    // Now if we should trigger an update, let's do that
-    if (sendCommand) {
-        // Save the new manual control inputs
-        manualRollAngle = roll;
-        manualPitchAngle = pitch;
-        manualYawAngle = yaw;
-        manualThrust = thrust;
-        manualButtons = buttons;
-
-        mavlink_message_t message;
-
-        if (joystickMode == Vehicle::JoystickModeAttitude) {
-            // send an external attitude setpoint command (rate control disabled)
-            float attitudeQuaternion[4];
-            mavlink_euler_to_quaternion(roll, pitch, yaw, attitudeQuaternion);
-            uint8_t typeMask = 0x7; // disable rate control
-            mavlink_msg_set_attitude_target_pack_chan(mavlink->getSystemId(),
-                                                      mavlink->getComponentId(),
-                                                      _vehicle->priorityLink()->mavlinkChannel(),
-                                                      &message,
-                                                      QGC::groundTimeUsecs(),
-                                                      this->uasId,
-                                                      0,
-                                                      typeMask,
-                                                      attitudeQuaternion,
-                                                      0,
-                                                      0,
-                                                      0,
-                                                      thrust);
-        } else if (joystickMode == Vehicle::JoystickModePosition) {
-            // Send the the local position setpoint (local pos sp external message)
-            static float px = 0;
-            static float py = 0;
-            static float pz = 0;
-            //XXX: find decent scaling
-            px -= pitch;
-            py += roll;
-            pz -= 2.0f*(thrust-0.5);
-            uint16_t typeMask = (1<<11)|(7<<6)|(7<<3); // select only POSITION control
-            mavlink_msg_set_position_target_local_ned_pack_chan(mavlink->getSystemId(),
-                                                                mavlink->getComponentId(),
-                                                                _vehicle->priorityLink()->mavlinkChannel(),
-                                                                &message,
-                                                                QGC::groundTimeUsecs(),
-                                                                this->uasId,
-                                                                0,
-                                                                MAV_FRAME_LOCAL_NED,
-                                                                typeMask,
-                                                                px,
-                                                                py,
-                                                                pz,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                yaw,
-                                                                0);
-        } else if (joystickMode == Vehicle::JoystickModeForce) {
-            // Send the the force setpoint (local pos sp external message)
-            float dcm[3][3];
-            mavlink_euler_to_dcm(roll, pitch, yaw, dcm);
-            const float fx = -dcm[0][2] * thrust;
-            const float fy = -dcm[1][2] * thrust;
-            const float fz = -dcm[2][2] * thrust;
-            uint16_t typeMask = (3<<10)|(7<<3)|(7<<0)|(1<<9); // select only FORCE control (disable everything else)
-            mavlink_msg_set_position_target_local_ned_pack_chan(mavlink->getSystemId(),
-                                                                mavlink->getComponentId(),
-                                                                _vehicle->priorityLink()->mavlinkChannel(),
-                                                                &message,
-                                                                QGC::groundTimeUsecs(),
-                                                                this->uasId,
-                                                                0,
-                                                                MAV_FRAME_LOCAL_NED,
-                                                                typeMask,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                fx,
-                                                                fy,
-                                                                fz,
-                                                                0,
-                                                                0);
-        } else if (joystickMode == Vehicle::JoystickModeVelocity) {
-            // Send the the local velocity setpoint (local pos sp external message)
-            static float vx = 0;
-            static float vy = 0;
-            static float vz = 0;
-            static float yawrate = 0;
-            //XXX: find decent scaling
-            vx -= pitch;
-            vy += roll;
-            vz -= 2.0f*(thrust-0.5);
-            yawrate += yaw; //XXX: not sure what scale to apply here
-            uint16_t typeMask = (1<<10)|(7<<6)|(7<<0); // select only VELOCITY control
-            mavlink_msg_set_position_target_local_ned_pack_chan(mavlink->getSystemId(),
-                                                                mavlink->getComponentId(),
-                                                                _vehicle->priorityLink()->mavlinkChannel(),
-                                                                &message,
-                                                                QGC::groundTimeUsecs(),
-                                                                this->uasId,
-                                                                0,
-                                                                MAV_FRAME_LOCAL_NED,
-                                                                typeMask,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                vx,
-                                                                vy,
-                                                                vz,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                0,
-                                                                yawrate);
-        } else if (joystickMode == Vehicle::JoystickModeRC) {
-
-            // Save the new manual control inputs
-            manualRollAngle = roll;
-            manualPitchAngle = pitch;
-            manualYawAngle = yaw;
-            manualThrust = thrust;
-            manualButtons = buttons;
-
-            // Store scaling values for all 3 axes
-            const float axesScaling = 1.0 * 1000.0;
-
-            // Calculate the new commands for roll, pitch, yaw, and thrust
-            const float newRollCommand = roll * axesScaling;
-            // negate pitch value because pitch is negative for pitching forward but mavlink message argument is positive for forward
-            const float newPitchCommand = -pitch * axesScaling;
-            const float newYawCommand = yaw * axesScaling;
-            const float newThrustCommand = thrust * axesScaling;
-
-            //qDebug() << newRollCommand << newPitchCommand << newYawCommand << newThrustCommand;
-
-            // Send the MANUAL_COMMAND message
-            mavlink_msg_manual_control_pack_chan(mavlink->getSystemId(),
-                                                 mavlink->getComponentId(),
-                                                 _vehicle->priorityLink()->mavlinkChannel(),
-                                                 &message,
-                                                 this->uasId,
-                                                 newPitchCommand, newRollCommand, newThrustCommand, newYawCommand, buttons);
-        }
-
-        _vehicle->sendMessageOnLink(_vehicle->priorityLink(), message);
-    }
+    _vehicle->sendMessageOnLink(_vehicle->priorityLink(), message);
 }
 
 #ifndef __mobile__
@@ -1222,62 +1003,12 @@ void UAS::pairRX(int rxType, int rxSubType)
 }
 
 /**
-* If enabled, connect the flight gear link.
-*/
-#ifndef __mobile__
-void UAS::enableHilFlightGear(bool enable, QString options, bool sensorHil, QObject * configuration)
-{
-    Q_UNUSED(configuration);
-
-    QGCFlightGearLink* link = dynamic_cast<QGCFlightGearLink*>(simulation);
-    if (!link) {
-        // Delete wrong sim
-        if (simulation) {
-            stopHil();
-            delete simulation;
-        }
-        simulation = new QGCFlightGearLink(_vehicle, options);
-    }
-
-    float noise_scaler = 0.0001f;
-    xacc_var = noise_scaler * 0.2914f;
-    yacc_var = noise_scaler * 0.2914f;
-    zacc_var = noise_scaler * 0.9577f;
-    rollspeed_var = noise_scaler * 0.8126f;
-    pitchspeed_var = noise_scaler * 0.6145f;
-    yawspeed_var = noise_scaler * 0.5852f;
-    xmag_var = noise_scaler * 0.0786f;
-    ymag_var = noise_scaler * 0.0566f;
-    zmag_var = noise_scaler * 0.0333f;
-    abs_pressure_var = noise_scaler * 0.5604f;
-    diff_pressure_var = noise_scaler * 0.2604f;
-    pressure_alt_var = noise_scaler * 0.5604f;
-    temperature_var = noise_scaler * 0.7290f;
-
-    // Connect Flight Gear Link
-    link = dynamic_cast<QGCFlightGearLink*>(simulation);
-    link->setStartupArguments(options);
-    link->sensorHilEnabled(sensorHil);
-    // FIXME: this signal is not on the base hil configuration widget, only on the FG widget
-    //QObject::connect(configuration, SIGNAL(barometerOffsetChanged(float)), link, SLOT(setBarometerOffset(float)));
-    if (enable)
-    {
-        startHil();
-    }
-    else
-    {
-        stopHil();
-    }
-}
-#endif
-
-/**
 * If enabled, connect the JSBSim link.
 */
 #ifndef __mobile__
 void UAS::enableHilJSBSim(bool enable, QString options)
 {
-    QGCJSBSimLink* link = dynamic_cast<QGCJSBSimLink*>(simulation);
+    auto* link = qobject_cast<QGCJSBSimLink*>(simulation);
     if (!link) {
         // Delete wrong sim
         if (simulation) {
@@ -1287,7 +1018,7 @@ void UAS::enableHilJSBSim(bool enable, QString options)
         simulation = new QGCJSBSimLink(_vehicle, options);
     }
     // Connect Flight Gear Link
-    link = dynamic_cast<QGCJSBSimLink*>(simulation);
+    link = qobject_cast<QGCJSBSimLink*>(simulation);
     link->setStartupArguments(options);
     if (enable)
     {
@@ -1306,7 +1037,7 @@ void UAS::enableHilJSBSim(bool enable, QString options)
 #ifndef __mobile__
 void UAS::enableHilXPlane(bool enable)
 {
-    QGCXPlaneLink* link = dynamic_cast<QGCXPlaneLink*>(simulation);
+    auto* link = qobject_cast<QGCXPlaneLink*>(simulation);
     if (!link) {
         if (simulation) {
             stopHil();
@@ -1649,14 +1380,6 @@ void UAS::stopHil()
 }
 #endif
 
-/**
-* @rerturn the map of the components
-*/
-QMap<int, QString> UAS::getComponents()
-{
-    return components;
-}
-
 void UAS::sendMapRCToParam(QString param_id, float scale, float value0, quint8 param_rc_channel_index, float valueMin, float valueMax)
 {
     if (!_vehicle) {
@@ -1719,12 +1442,6 @@ void UAS::unsetRCToParameterMap()
     }
 }
 
-void UAS::_say(const QString& text, int severity)
-{
-    Q_UNUSED(severity);
-    qgcApp()->toolbox()->audioOutput()->say(text);
-}
-
 void UAS::shutdownVehicle(void)
 {
 #ifndef __mobile__
@@ -1736,5 +1453,5 @@ void UAS::shutdownVehicle(void)
         simulation->deleteLater();
     }
 #endif
-    _vehicle = NULL;
+    _vehicle = nullptr;
 }

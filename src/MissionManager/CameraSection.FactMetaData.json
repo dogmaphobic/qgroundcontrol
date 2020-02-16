@@ -32,6 +32,7 @@
     "units":            "gimbal-degrees",
     "min":              -90,
     "max":              0,
+    "increment":        5,
     "decimalPlaces":    0,
     "defaultValue":     0
 },
@@ -42,15 +43,16 @@
     "units":            "deg",
     "min":              -180.0,
     "max":              180.0,
+    "increment":        5,
     "decimalPlaces":    0,
     "defaultValue":     0
 },
 {
     "name":             "CameraMode",
-    "shortDescription": "Specify whether the camera should switch to photo or video mode",
+    "shortDescription": "Specify whether the camera should switch to Photo, Video or Survey mode",
     "type":             "uint32",
-    "enumStrings":      "Take photos,Record video",
-    "enumValues":       "0,1",
+    "enumStrings":      "Photo,Video,Survey",
+    "enumValues":       "0,1,2",
     "defaultValue":     0
 }
 ]

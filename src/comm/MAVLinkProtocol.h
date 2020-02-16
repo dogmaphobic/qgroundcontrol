@@ -1,14 +1,13 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#ifndef MAVLINKPROTOCOL_H_
-#define MAVLINKPROTOCOL_H_
+#pragma once
 
 #include <QObject>
 #include <QMutex>
@@ -35,8 +34,7 @@ Q_DECLARE_LOGGING_CATEGORY(MAVLinkProtocolLog)
  * @brief MAVLink micro air vehicle protocol reference implementation.
  *
  * MAVLink is a generic communication protocol for micro air vehicles.
- * for more information, please see the official website.
- * @ref http://pixhawk.ethz.ch/software/mavlink/
+ * for more information, please see the official website: https://mavlink.io
  **/
 class MAVLinkProtocol : public QGCTool
 {
@@ -61,34 +59,20 @@ public:
     int getVersion() {
         return MAVLINK_VERSION;
     }
-    /**
-     * Retrieve a total of all successfully parsed packets for the specified link.
-     * @returns -1 if this is not available for this protocol, # of packets otherwise.
-     */
-    qint32 getReceivedPacketCount(const LinkInterface *link) const {
-        return totalReceiveCounter[link->mavlinkChannel()];
-    }
-    /**
-     * Retrieve a total of all parsing errors for the specified link.
-     * @returns -1 if this is not available for this protocol, # of errors otherwise.
-     */
-    qint32 getParsingErrorCount(const LinkInterface *link) const {
-        return totalErrorCounter[link->mavlinkChannel()];
-    }
-    /**
-     * Retrieve a total of all dropped packets for the specified link.
-     * @returns -1 if this is not available for this protocol, # of packets otherwise.
-     */
-    qint32 getDroppedPacketCount(const LinkInterface *link) const {
-        return totalLossCounter[link->mavlinkChannel()];
+    /** @brief Get the currently configured protocol version */
+    unsigned getCurrentVersion() {
+        return _current_version;
     }
     /**
      * Reset the counters for all metadata for this link.
      */
-    virtual void resetMetadataForLink(const LinkInterface *link);
+    virtual void resetMetadataForLink(LinkInterface *link);
     
     /// Suspend/Restart logging during replay.
     void suspendLogForReplay(bool suspend);
+
+    /// Set protocol version
+    void setVersion(unsigned version);
 
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);
@@ -96,6 +80,9 @@ public:
 public slots:
     /** @brief Receive bytes from a communication interface */
     void receiveBytes(LinkInterface* link, QByteArray b);
+
+    /** @brief Log bytes sent from a communication interface */
+    void logSentBytes(LinkInterface* link, QByteArray b);
     
     /** @brief Set the system id of this application */
     void setSystemId(int id);
@@ -115,20 +102,24 @@ public slots:
     void checkForLostLogFiles(void);
 
 protected:
-    bool m_enable_version_check; ///< Enable checking of version match of MAV and QGC
-    QMutex receiveMutex;        ///< Mutex to protect receiveBytes function
-    int lastIndex[256][256];    ///< Store the last received sequence ID for each system/componenet pair
-    int totalReceiveCounter[MAVLINK_COMM_NUM_BUFFERS];    ///< The total number of successfully received messages
-    int totalLossCounter[MAVLINK_COMM_NUM_BUFFERS];       ///< Total messages lost during transmission.
-    int totalErrorCounter[MAVLINK_COMM_NUM_BUFFERS];      ///< Total count of all parsing errors. Generally <= totalLossCounter.
-    int currReceiveCounter[MAVLINK_COMM_NUM_BUFFERS];     ///< Received messages during this sample time window. Used for calculating loss %.
-    int currLossCounter[MAVLINK_COMM_NUM_BUFFERS];        ///< Lost messages during this sample time window. Used for calculating loss %.
-    bool versionMismatchIgnore;
-    int systemId;
+    bool        m_enable_version_check;                         ///< Enable checking of version match of MAV and QGC
+    uint8_t     lastIndex[256][256];                            ///< Store the last received sequence ID for each system/componenet pair
+    uint8_t     firstMessage[256][256];                         ///< First message flag
+    uint64_t    totalReceiveCounter[MAVLINK_COMM_NUM_BUFFERS];  ///< The total number of successfully received messages
+    uint64_t    totalLossCounter[MAVLINK_COMM_NUM_BUFFERS];     ///< Total messages lost during transmission.
+    float       runningLossPercent[MAVLINK_COMM_NUM_BUFFERS];   ///< Loss rate
+
+    mavlink_message_t _message;
+    mavlink_status_t _status;
+
+    bool        versionMismatchIgnore;
+    int         systemId;
+    unsigned    _current_version;
+    int         _radio_version_mismatch_count;
 
 signals:
     /// Heartbeat received on link
-    void vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleMavlinkVersion, int vehicleFirmwareType, int vehicleType);
+    void vehicleHeartbeatInfo(LinkInterface* link, int vehicleId, int componentId, int vehicleFirmwareType, int vehicleType);
 
     /** @brief Message received and directly copied via signal */
     void messageReceived(LinkInterface* link, mavlink_message_t message);
@@ -139,8 +130,7 @@ signals:
     /** @brief Emitted if a new system ID was set */
     void systemIdChanged(int systemId);
 
-    void receiveLossPercentChanged(int uasId, float lossPercent);
-    void receiveLossTotalChanged(int uasId, int totalLoss);
+    void mavlinkMessageStatus(int uasId, uint64_t totalSent, uint64_t totalReceived, uint64_t totalLoss, float lossPercent);
 
     /**
      * @brief Emitted if a new radio status packet received
@@ -182,4 +172,3 @@ private:
     MultiVehicleManager*    _multiVehicleManager;
 };
 
-#endif // MAVLINKPROTOCOL_H_

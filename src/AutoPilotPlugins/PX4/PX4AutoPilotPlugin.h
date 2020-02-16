@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -44,6 +44,7 @@ public:
     const QVariantList& vehicleComponents(void) override;
     void parametersReadyPreChecks(void) override;
     QString prerequisiteSetup(VehicleComponent* component) const override;
+
 protected:
     bool                    _incorrectParameterVersion; ///< true: parameter version incorrect, setup not allowed
     PX4AirframeLoader*      _airframeFacts;
@@ -58,6 +59,7 @@ protected:
     MotorComponent*         _motorComponent;
     PX4TuningComponent*     _tuningComponent;
     SyslinkComponent*       _syslinkComponent;
+
 private:
     QVariantList            _components;
 };

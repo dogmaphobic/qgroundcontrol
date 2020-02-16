@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -14,8 +14,13 @@
 #include <QVariantList>
 #include <QGeoCoordinate>
 
+/// @file
+/// @author Don Gagne <don@thegagnes.com>
+
 class QmlObjectListModel;
 
+/// @brief Json manipulation helper class.
+/// Primarily used for parsing and processing Fact metadata.
 class JsonHelper
 {
 public:
@@ -64,22 +69,39 @@ public:
     static bool validateKeys(const QJsonObject& jsonObject, const QList<KeyValidateInfo>& keyInfo, QString& errorString);
 
     /// Loads a QGeoCoordinate
+    ///     Stored as array [ lat, lon, alt ]
     /// @return false: validation failed
-    static bool loadGeoCoordinate(const QJsonValue& jsonValue,          ///< json value to load from
-                                  bool              altitudeRequired,   ///< true: altitude must be specified
-                                  QGeoCoordinate&   coordinate,         ///< returned QGeoCordinate
-                                  QString&          errorString);       ///< returned error string if load failure
+    static bool loadGeoCoordinate(const QJsonValue& jsonValue,              ///< json value to load from
+                                  bool              altitudeRequired,       ///< true: altitude must be specified
+                                  QGeoCoordinate&   coordinate,             ///< returned QGeoCordinate
+                                  QString&          errorString,            ///< returned error string if load failure
+                                  bool              geoJsonFormat = false); ///< if true, use [lon, lat], [lat, lon] otherwise
+
+    /// Saves a QGeoCoordinate
+    ///     Stored as array [ lat, lon, alt ]
+    static void saveGeoCoordinate(const QGeoCoordinate& coordinate,     ///< QGeoCoordinate to save
+                                  bool                  writeAltitude,  ///< true: write altitude to json
+                                  QJsonValue&           jsonValue);     ///< json value to save to
+
+    /// Loads a QGeoCoordinate
+    ///     Stored as array [ lon, lat, alt ]
+    /// @return false: validation failed
+    static bool loadGeoJsonCoordinate(const QJsonValue& jsonValue,          ///< json value to load from
+                                      bool              altitudeRequired,   ///< true: altitude must be specified
+                                      QGeoCoordinate&   coordinate,         ///< returned QGeoCordinate
+                                      QString&          errorString);       ///< returned error string if load failure
+
+    /// Saves a QGeoCoordinate
+    ///     Stored as array [ lon, lat, alt ]
+    static void saveGeoJsonCoordinate(const QGeoCoordinate& coordinate,     ///< QGeoCoordinate to save
+                                      bool                  writeAltitude,  ///< true: write altitude to json
+                                      QJsonValue&           jsonValue);     ///< json value to save to
 
     /// Loads a polygon from an array
     static bool loadPolygon(const QJsonArray&   polygonArray,   ///< Array of coordinates
                             QmlObjectListModel& list,           ///< Empty list to add vertices to
                             QObject*            parent,         ///< parent for newly allocated QGCQGeoCoordinates
                             QString&            errorString);   ///< returned error string if load failure
-
-    /// Saves a QGeoCoordinate
-    static void saveGeoCoordinate(const QGeoCoordinate& coordinate,     ///< QGeoCoordinate to save
-                                  bool                  writeAltitude,  ///< true: write altitude to json
-                                  QJsonValue&           jsonValue);     ///< json value to save to
 
     /// Loads a list of QGeoCoordinates from a json array
     /// @return false: validation failed
@@ -104,9 +126,10 @@ public:
     static void savePolygon(QmlObjectListModel& list,           ///< List which contains vertices
                             QJsonArray&         polygonArray);  ///< Array to save into
 
-    static bool parseEnum(const QJsonObject& jsonObject, QStringList& enumStrings, QStringList& enumValues, QString& errorString);
+    static bool parseEnum(const QJsonObject& jsonObject, QStringList& enumStrings, QStringList& enumValues, QString& errorString, QString valueName = QString());
+    static bool parseEnum(const QJsonObject& jsonObject, QMap<QString, QString>& defineMap, QStringList& enumStrings, QStringList& enumValues, QString& errorString, QString valueName = QString());
 
-    /// Returns NaN if the value is null, or it not the double value
+    /// Returns NaN if the value is null, or if not, the double value
     static double possibleNaNJsonValue(const QJsonValue& value);
 
     static const char* jsonVersionKey;
@@ -116,6 +139,16 @@ public:
 
 private:
     static QString _jsonValueTypeToString(QJsonValue::Type type);
+    static bool _loadGeoCoordinate(const QJsonValue&    jsonValue,
+                                   bool                 altitudeRequired,
+                                   QGeoCoordinate&      coordinate,
+                                   QString&             errorString,
+                                   bool                 geoJsonFormat);
+    static void _saveGeoCoordinate(const QGeoCoordinate&    coordinate,
+                                   bool                     writeAltitude,
+                                   QJsonValue&              jsonValue,
+                                   bool                     geoJsonFormat);
+    static bool _parseEnumWorker(const QJsonObject& jsonObject, QMap<QString, QString>& defineMap, QStringList& enumStrings, QStringList& enumValues, QString& errorString, QString valueName);
 
     static const char*  _enumStringsJsonKey;
     static const char*  _enumValuesJsonKey;

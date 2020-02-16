@@ -19,7 +19,6 @@ bool JoystickSDL::init(void) {
         qWarning() << "Couldn't initialize SimpleDirectMediaLayer:" << SDL_GetError();
         return false;
     }
-
     _loadGameControllerMappings();
     return true;
 }
@@ -36,7 +35,6 @@ QMap<QString, Joystick*> JoystickSDL::discover(MultiVehicleManager* _multiVehicl
     for (int i=0; i<SDL_NumJoysticks(); i++) {
         QString name = SDL_JoystickNameForIndex(i);
 
-        // TODO use GUID instead of name in case of two joysticks with same name
         if (!ret.contains(name)) {
             int axisCount, buttonCount, hatCount;
             bool isGameController;
@@ -65,10 +63,21 @@ QMap<QString, Joystick*> JoystickSDL::discover(MultiVehicleManager* _multiVehicl
             }
 
             qCDebug(JoystickLog) << "\t" << name << "axes:" << axisCount << "buttons:" << buttonCount << "hats:" << hatCount << "isGC:" << isGameController;
+
+            // Check for joysticks with duplicate names and differentiate the keys when necessary.
+            // This is required when using an Xbox 360 wireless receiver that always identifies as
+            // 4 individual joysticks, regardless of how many joysticks are actually connected to the
+            // receiver. Using GUID does not help, all of these devices present the same GUID.
+            QString originalName = name;
+            uint8_t duplicateIdx = 1;
+            while (newRet[name]) {
+                name = QString("%1 %2").arg(originalName).arg(duplicateIdx++);
+            }
+
             newRet[name] = new JoystickSDL(name, qMax(0,axisCount), qMax(0,buttonCount), qMax(0,hatCount), i, isGameController, _multiVehicleManager);
         } else {
             newRet[name] = ret[name];
-            JoystickSDL *j = (JoystickSDL*)newRet[name];
+            JoystickSDL *j = static_cast<JoystickSDL*>(newRet[name]);
             if (j->index() != i) {
                 j->setIndex(i); // This joystick index has been remapped by SDL
             }
@@ -121,7 +130,7 @@ bool JoystickSDL::_open(void) {
 }
 
 void JoystickSDL::_close(void) {
-    if (sdlJoystick == NULL) {
+    if (sdlJoystick == nullptr) {
         qCDebug(JoystickLog) << "Attempt to close null joystick!";
         return;
     }
@@ -135,12 +144,15 @@ void JoystickSDL::_close(void) {
 
         if (SDL_JoystickInstanceID(sdlJoystick) != -1) {
             qCDebug(JoystickLog) << "\tID:" << SDL_JoystickInstanceID(sdlJoystick);
-            SDL_JoystickClose(sdlJoystick);
+            // This segfaults so often, and I've spent so much time trying to find the cause and fix it
+            // I think this might be an SDL bug
+            // We are much more stable just commenting this out
+            //SDL_JoystickClose(sdlJoystick);
         }
     }
 
-    sdlJoystick = NULL;
-    sdlController = NULL;
+    sdlJoystick   = nullptr;
+    sdlController = nullptr;
 }
 
 bool JoystickSDL::_update(void)
@@ -151,26 +163,25 @@ bool JoystickSDL::_update(void)
 }
 
 bool JoystickSDL::_getButton(int i) {
-    if ( _isGameController ) {
-        return !!SDL_GameControllerGetButton(sdlController, SDL_GameControllerButton(i));
+    if (_isGameController) {
+        return SDL_GameControllerGetButton(sdlController, SDL_GameControllerButton(i)) == 1;
     } else {
-        return !!SDL_JoystickGetButton(sdlJoystick, i);
+        return SDL_JoystickGetButton(sdlJoystick, i) == 1;
     }
 }
 
 int JoystickSDL::_getAxis(int i) {
-    if ( _isGameController ) {
+    if (_isGameController) {
         return SDL_GameControllerGetAxis(sdlController, SDL_GameControllerAxis(i));
     } else {
         return SDL_JoystickGetAxis(sdlJoystick, i);
     }
 }
 
-uint8_t JoystickSDL::_getHat(int hat,int i) {
+bool JoystickSDL::_getHat(int hat, int i) {
     uint8_t hatButtons[] = {SDL_HAT_UP,SDL_HAT_DOWN,SDL_HAT_LEFT,SDL_HAT_RIGHT};
-
-    if ( i < int(sizeof(hatButtons)) ) {
-        return !!(SDL_JoystickGetHat(sdlJoystick, hat) & hatButtons[i]);
+    if (i < int(sizeof(hatButtons))) {
+        return (SDL_JoystickGetHat(sdlJoystick, hat) & hatButtons[i]) != 0;
     }
-    return 0;
+    return false;
 }

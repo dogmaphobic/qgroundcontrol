@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,32 +10,11 @@
 #include "AppSettings.h"
 #include "QGCPalette.h"
 #include "QGCApplication.h"
+#include "ParameterManager.h"
 
 #include <QQmlEngine>
 #include <QtQml>
 #include <QStandardPaths>
-
-const char* AppSettings::appSettingsGroupName =                         "App";
-const char* AppSettings::offlineEditingFirmwareTypeSettingsName =       "OfflineEditingFirmwareType";
-const char* AppSettings::offlineEditingVehicleTypeSettingsName =        "OfflineEditingVehicleType";
-const char* AppSettings::offlineEditingCruiseSpeedSettingsName =        "OfflineEditingCruiseSpeed";
-const char* AppSettings::offlineEditingHoverSpeedSettingsName =         "OfflineEditingHoverSpeed";
-const char* AppSettings::offlineEditingAscentSpeedSettingsName =        "OfflineEditingAscentSpeed";
-const char* AppSettings::offlineEditingDescentSpeedSettingsName =       "OfflineEditingDescentSpeed";
-const char* AppSettings::batteryPercentRemainingAnnounceSettingsName =  "batteryPercentRemainingAnnounce";
-const char* AppSettings::defaultMissionItemAltitudeSettingsName =       "DefaultMissionItemAltitude";
-const char* AppSettings::telemetrySaveName =                            "PromptFLightDataSave";
-const char* AppSettings::telemetrySaveNotArmedName =                    "PromptFLightDataSaveNotArmed";
-const char* AppSettings::audioMutedName =                               "AudioMuted";
-const char* AppSettings::virtualJoystickName =                          "VirtualTabletJoystick";
-const char* AppSettings::appFontPointSizeName =                         "BaseDeviceFontPointSize";
-const char* AppSettings::indoorPaletteName =                            "StyleIsDark";
-const char* AppSettings::showLargeCompassName =                         "ShowLargeCompass";
-const char* AppSettings::savePathName =                                 "SavePath";
-const char* AppSettings::autoLoadMissionsName =                         "AutoLoadMissions";
-const char* AppSettings::mapboxTokenName =                              "MapboxToken";
-const char* AppSettings::esriTokenName =                                "EsriToken";
-const char* AppSettings::defaultFirmwareTypeName =                      "DefaultFirmwareType";
 
 const char* AppSettings::parameterFileExtension =   "params";
 const char* AppSettings::planFileExtension =        "plan";
@@ -44,6 +23,8 @@ const char* AppSettings::waypointsFileExtension =   "waypoints";
 const char* AppSettings::fenceFileExtension =       "fence";
 const char* AppSettings::rallyPointFileExtension =  "rally";
 const char* AppSettings::telemetryFileExtension =   "tlog";
+const char* AppSettings::kmlFileExtension =         "kml";
+const char* AppSettings::shpFileExtension =         "shp";
 const char* AppSettings::logFileExtension =         "ulg";
 
 const char* AppSettings::parameterDirectory =       "Parameters";
@@ -51,31 +32,10 @@ const char* AppSettings::telemetryDirectory =       "Telemetry";
 const char* AppSettings::missionDirectory =         "Missions";
 const char* AppSettings::logDirectory =             "Logs";
 const char* AppSettings::videoDirectory =           "Video";
+const char* AppSettings::crashDirectory =           "CrashLogs";
 
-AppSettings::AppSettings(QObject* parent)
-    : SettingsGroup(appSettingsGroupName, QString() /* root settings group */, parent)
-    , _offlineEditingFirmwareTypeFact(NULL)
-    , _offlineEditingVehicleTypeFact(NULL)
-    , _offlineEditingCruiseSpeedFact(NULL)
-    , _offlineEditingHoverSpeedFact(NULL)
-    , _offlineEditingAscentSpeedFact(NULL)
-    , _offlineEditingDescentSpeedFact(NULL)
-    , _batteryPercentRemainingAnnounceFact(NULL)
-    , _defaultMissionItemAltitudeFact(NULL)
-    , _telemetrySaveFact(NULL)
-    , _telemetrySaveNotArmedFact(NULL)
-    , _audioMutedFact(NULL)
-    , _virtualJoystickFact(NULL)
-    , _appFontPointSizeFact(NULL)
-    , _indoorPaletteFact(NULL)
-    , _showLargeCompassFact(NULL)
-    , _savePathFact(NULL)
-    , _autoLoadMissionsFact(NULL)
-    , _mapboxTokenFact(NULL)
-    , _esriTokenFact(NULL)
-    , _defaultFirmwareTypeFact(NULL)
+DECLARE_SETTINGGROUP(App, "")
 {
-    QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     qmlRegisterUncreatableType<AppSettings>("QGroundControl.SettingsManager", 1, 0, "AppSettings", "Reference only");
     QGCPalette::setGlobalTheme(indoorPalette()->rawValue().toBool() ? QGCPalette::Dark : QGCPalette::Light);
 
@@ -86,7 +46,7 @@ AppSettings::AppSettings(QObject* parent)
     if (savePathFact->rawValue().toString().isEmpty() && _nameToMetaDataMap[savePathName]->rawDefaultValue().toString().isEmpty()) {
 #ifdef __mobile__
 #ifdef __ios__
-        QDir rootDir = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation));
+        QDir rootDir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
 #else
         QDir rootDir = QDir(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation));
 #endif
@@ -101,6 +61,57 @@ AppSettings::AppSettings(QObject* parent)
     connect(savePathFact, &Fact::rawValueChanged, this, &AppSettings::_checkSavePathDirectories);
 
     _checkSavePathDirectories();
+    //-- Keep track of language changes
+    SettingsFact* languageFact = qobject_cast<SettingsFact*>(language());
+    connect(languageFact, &Fact::rawValueChanged, this, &AppSettings::_languageChanged);
+}
+
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingFirmwareType)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingVehicleType)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingCruiseSpeed)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingHoverSpeed)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingAscentSpeed)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingDescentSpeed)
+DECLARE_SETTINGSFACT(AppSettings, batteryPercentRemainingAnnounce)
+DECLARE_SETTINGSFACT(AppSettings, defaultMissionItemAltitude)
+DECLARE_SETTINGSFACT(AppSettings, telemetrySave)
+DECLARE_SETTINGSFACT(AppSettings, telemetrySaveNotArmed)
+DECLARE_SETTINGSFACT(AppSettings, audioMuted)
+DECLARE_SETTINGSFACT(AppSettings, checkInternet)
+DECLARE_SETTINGSFACT(AppSettings, virtualJoystick)
+DECLARE_SETTINGSFACT(AppSettings, virtualJoystickCentralized)
+DECLARE_SETTINGSFACT(AppSettings, appFontPointSize)
+DECLARE_SETTINGSFACT(AppSettings, showLargeCompass)
+DECLARE_SETTINGSFACT(AppSettings, savePath)
+DECLARE_SETTINGSFACT(AppSettings, autoLoadMissions)
+DECLARE_SETTINGSFACT(AppSettings, useChecklist)
+DECLARE_SETTINGSFACT(AppSettings, enforceChecklist)
+DECLARE_SETTINGSFACT(AppSettings, mapboxToken)
+DECLARE_SETTINGSFACT(AppSettings, esriToken)
+DECLARE_SETTINGSFACT(AppSettings, defaultFirmwareType)
+DECLARE_SETTINGSFACT(AppSettings, gstDebugLevel)
+DECLARE_SETTINGSFACT(AppSettings, followTarget)
+DECLARE_SETTINGSFACT(AppSettings, apmStartMavlinkStreams)
+DECLARE_SETTINGSFACT(AppSettings, enableTaisync)
+DECLARE_SETTINGSFACT(AppSettings, enableTaisyncVideo)
+DECLARE_SETTINGSFACT(AppSettings, enableMicrohard)
+DECLARE_SETTINGSFACT(AppSettings, language)
+DECLARE_SETTINGSFACT(AppSettings, disableAllPersistence)
+DECLARE_SETTINGSFACT(AppSettings, usePairing)
+DECLARE_SETTINGSFACT(AppSettings, saveCsvTelemetry)
+
+DECLARE_SETTINGSFACT_NO_FUNC(AppSettings, indoorPalette)
+{
+    if (!_indoorPaletteFact) {
+        _indoorPaletteFact = _createSettingsFact(indoorPaletteName);
+        connect(_indoorPaletteFact, &Fact::rawValueChanged, this, &AppSettings::_indoorPaletteChanged);
+    }
+    return _indoorPaletteFact;
+}
+
+void AppSettings::_languageChanged()
+{
+    qgcApp()->setLanguage();
 }
 
 void AppSettings::_checkSavePathDirectories(void)
@@ -115,246 +126,73 @@ void AppSettings::_checkSavePathDirectories(void)
         savePathDir.mkdir(missionDirectory);
         savePathDir.mkdir(logDirectory);
         savePathDir.mkdir(videoDirectory);
+        savePathDir.mkdir(crashDirectory);
     }
-}
-
-Fact* AppSettings::offlineEditingFirmwareType(void)
-{
-    if (!_offlineEditingFirmwareTypeFact) {
-        _offlineEditingFirmwareTypeFact = _createSettingsFact(offlineEditingFirmwareTypeSettingsName);
-    }
-
-    return _offlineEditingFirmwareTypeFact;
-}
-
-Fact* AppSettings::offlineEditingVehicleType(void)
-{
-    if (!_offlineEditingVehicleTypeFact) {
-        _offlineEditingVehicleTypeFact = _createSettingsFact(offlineEditingVehicleTypeSettingsName);
-    }
-
-    return _offlineEditingVehicleTypeFact;
-}
-
-Fact* AppSettings::offlineEditingCruiseSpeed(void)
-{
-    if (!_offlineEditingCruiseSpeedFact) {
-        _offlineEditingCruiseSpeedFact = _createSettingsFact(offlineEditingCruiseSpeedSettingsName);
-    }
-    return _offlineEditingCruiseSpeedFact;
-}
-
-Fact* AppSettings::offlineEditingHoverSpeed(void)
-{
-    if (!_offlineEditingHoverSpeedFact) {
-        _offlineEditingHoverSpeedFact = _createSettingsFact(offlineEditingHoverSpeedSettingsName);
-    }
-    return _offlineEditingHoverSpeedFact;
-}
-
-Fact* AppSettings::offlineEditingAscentSpeed(void)
-{
-    if (!_offlineEditingAscentSpeedFact) {
-        _offlineEditingAscentSpeedFact = _createSettingsFact(offlineEditingAscentSpeedSettingsName);
-    }
-    return _offlineEditingAscentSpeedFact;
-}
-
-Fact* AppSettings::offlineEditingDescentSpeed(void)
-{
-    if (!_offlineEditingDescentSpeedFact) {
-        _offlineEditingDescentSpeedFact = _createSettingsFact(offlineEditingDescentSpeedSettingsName);
-    }
-    return _offlineEditingDescentSpeedFact;
-}
-
-Fact* AppSettings::batteryPercentRemainingAnnounce(void)
-{
-    if (!_batteryPercentRemainingAnnounceFact) {
-        _batteryPercentRemainingAnnounceFact = _createSettingsFact(batteryPercentRemainingAnnounceSettingsName);
-    }
-
-    return _batteryPercentRemainingAnnounceFact;
-}
-
-Fact* AppSettings::defaultMissionItemAltitude(void)
-{
-    if (!_defaultMissionItemAltitudeFact) {
-        _defaultMissionItemAltitudeFact = _createSettingsFact(defaultMissionItemAltitudeSettingsName);
-    }
-
-    return _defaultMissionItemAltitudeFact;
-}
-
-Fact* AppSettings::telemetrySave(void)
-{
-    if (!_telemetrySaveFact) {
-        _telemetrySaveFact = _createSettingsFact(telemetrySaveName);
-    }
-
-    return _telemetrySaveFact;
-}
-
-Fact* AppSettings::telemetrySaveNotArmed(void)
-{
-    if (!_telemetrySaveNotArmedFact) {
-        _telemetrySaveNotArmedFact = _createSettingsFact(telemetrySaveNotArmedName);
-    }
-
-    return _telemetrySaveNotArmedFact;
-}
-
-Fact* AppSettings::audioMuted(void)
-{
-    if (!_audioMutedFact) {
-        _audioMutedFact = _createSettingsFact(audioMutedName);
-    }
-
-    return _audioMutedFact;
-}
-
-Fact* AppSettings::appFontPointSize(void)
-{
-    if (!_appFontPointSizeFact) {
-        _appFontPointSizeFact = _createSettingsFact(appFontPointSizeName);
-    }
-
-    return _appFontPointSizeFact;
-}
-
-Fact* AppSettings::virtualJoystick(void)
-{
-    if (!_virtualJoystickFact) {
-        _virtualJoystickFact = _createSettingsFact(virtualJoystickName);
-    }
-
-    return _virtualJoystickFact;
-}
-
-Fact* AppSettings::indoorPalette(void)
-{
-    if (!_indoorPaletteFact) {
-        _indoorPaletteFact = _createSettingsFact(indoorPaletteName);
-        connect(_indoorPaletteFact, &Fact::rawValueChanged, this, &AppSettings::_indoorPaletteChanged);
-    }
-
-    return _indoorPaletteFact;
 }
 
 void AppSettings::_indoorPaletteChanged(void)
 {
-    qgcApp()->_loadCurrentStyleSheet();
     QGCPalette::setGlobalTheme(indoorPalette()->rawValue().toBool() ? QGCPalette::Dark : QGCPalette::Light);
-}
-
-Fact* AppSettings::showLargeCompass(void)
-{
-    if (!_showLargeCompassFact) {
-        _showLargeCompassFact = _createSettingsFact(showLargeCompassName);
-    }
-
-    return _showLargeCompassFact;
-}
-
-Fact* AppSettings::savePath(void)
-{
-    if (!_savePathFact) {
-        _savePathFact = _createSettingsFact(savePathName);
-    }
-
-    return _savePathFact;
 }
 
 QString AppSettings::missionSavePath(void)
 {
-    QString fullPath;
-
     QString path = savePath()->rawValue().toString();
     if (!path.isEmpty() && QDir(path).exists()) {
         QDir dir(path);
         return dir.filePath(missionDirectory);
     }
-
-    return fullPath;
+    return QString();
 }
 
 QString AppSettings::parameterSavePath(void)
 {
-    QString fullPath;
-
     QString path = savePath()->rawValue().toString();
     if (!path.isEmpty() && QDir(path).exists()) {
         QDir dir(path);
         return dir.filePath(parameterDirectory);
     }
-
-    return fullPath;
+    return QString();
 }
 
 QString AppSettings::telemetrySavePath(void)
 {
-    QString fullPath;
-
     QString path = savePath()->rawValue().toString();
     if (!path.isEmpty() && QDir(path).exists()) {
         QDir dir(path);
         return dir.filePath(telemetryDirectory);
     }
-
-    return fullPath;
+    return QString();
 }
 
 QString AppSettings::logSavePath(void)
 {
-    QString fullPath;
-
     QString path = savePath()->rawValue().toString();
     if (!path.isEmpty() && QDir(path).exists()) {
         QDir dir(path);
         return dir.filePath(logDirectory);
     }
-
-    return fullPath;
+    return QString();
 }
 
 QString AppSettings::videoSavePath(void)
 {
-    QString fullPath;
-
     QString path = savePath()->rawValue().toString();
     if (!path.isEmpty() && QDir(path).exists()) {
         QDir dir(path);
         return dir.filePath(videoDirectory);
     }
-
-    return fullPath;
+    return QString();
 }
 
-Fact* AppSettings::autoLoadMissions(void)
+QString AppSettings::crashSavePath(void)
 {
-    if (!_autoLoadMissionsFact) {
-        _autoLoadMissionsFact = _createSettingsFact(autoLoadMissionsName);
+    QString path = savePath()->rawValue().toString();
+    if (!path.isEmpty() && QDir(path).exists()) {
+        QDir dir(path);
+        return dir.filePath(crashDirectory);
     }
-
-    return _autoLoadMissionsFact;
-}
-
-Fact* AppSettings::mapboxToken(void)
-{
-    if (!_mapboxTokenFact) {
-        _mapboxTokenFact = _createSettingsFact(mapboxTokenName);
-    }
-
-    return _mapboxTokenFact;
-}
-
-Fact* AppSettings::esriToken(void)
-{
-    if (!_esriTokenFact) {
-        _esriTokenFact = _createSettingsFact(esriTokenName);
-    }
-
-    return _esriTokenFact;
+    return QString();
 }
 
 MAV_AUTOPILOT AppSettings::offlineEditingFirmwareTypeFromFirmwareType(MAV_AUTOPILOT firmwareType)
@@ -378,13 +216,4 @@ MAV_TYPE AppSettings::offlineEditingVehicleTypeFromVehicleType(MAV_TYPE vehicleT
     } else {
         return MAV_TYPE_QUADROTOR;
     }
-}
-
-Fact* AppSettings::defaultFirmwareType(void)
-{
-    if (!_defaultFirmwareTypeFact) {
-        _defaultFirmwareTypeFact = _createSettingsFact(defaultFirmwareTypeName);
-    }
-
-    return _defaultFirmwareTypeFact;
 }

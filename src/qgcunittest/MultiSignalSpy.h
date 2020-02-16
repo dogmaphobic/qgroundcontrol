@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -8,8 +8,7 @@
  ****************************************************************************/
 
 
-#ifndef MULTISIGNALSPY_H
-#define MULTISIGNALSPY_H
+#pragma once
 
 #include <QObject>
 #include <QSignalSpy>
@@ -26,7 +25,7 @@ class MultiSignalSpy : public QObject
     Q_OBJECT
     
 public:
-    MultiSignalSpy(QObject* parent = NULL);
+    MultiSignalSpy(QObject* parent = nullptr);
     ~MultiSignalSpy();
 
     bool init(QObject* signalEmitter, const char** rgSignals, size_t cSignals);
@@ -80,4 +79,3 @@ private:
     bool            _timeout;
 };
 
-#endif

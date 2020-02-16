@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -31,11 +31,12 @@ private slots:
     void _testSpeedSectionDirty(void);
     void _testCameraSection(void);
     void _testSpeedSection(void);
+    void _testAltitudePropogation(void);
 
 private:
     enum {
         commandChangedIndex = 0,
-        frameChangedIndex,
+        altitudeModeChangedIndex,
         friendlyEditAllowedChangedIndex,
         headingDegreesChangedIndex,
         rawEditChangedIndex,
@@ -47,7 +48,7 @@ private:
 
     enum {
         commandChangedMask =                        1 << commandChangedIndex,
-        frameChangedMask =                          1 << frameChangedIndex,
+        altitudeModeChangedMask =                  1 << altitudeModeChangedIndex,
         friendlyEditAllowedChangedMask =            1 << friendlyEditAllowedChangedIndex,
         headingDegreesChangedMask =                 1 << headingDegreesChangedIndex,
         rawEditChangedMask =                        1 << rawEditChangedIndex,
@@ -70,9 +71,10 @@ private:
     } FactValue_t;
     
     typedef struct {
-        size_t              cFactValues;
-        const FactValue_t*  rgFactValues;
-        bool                relativeAltCheckbox;
+        size_t                          cFactValues;
+        const FactValue_t*              rgFactValues;
+        double                          altValue;
+        QGroundControlQmlGlobal::AltitudeMode altMode;
     } ItemExpected_t;
 
     SimpleMissionItem*  _simpleItem;

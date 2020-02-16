@@ -40,7 +40,7 @@
 ** 2015.4.4
 ** Adapted for use with QGroundControl
 **
-** Gus Grubba <mavlink@grubba.com>
+** Gus Grubba <gus@auterion.com>
 **
 ****************************************************************************/
 
@@ -60,6 +60,9 @@ public:
     QGeoTiledMapReplyQGC(QNetworkAccessManager*  networkManager, const QNetworkRequest& request, const QGeoTileSpec &spec, QObject *parent = 0);
     ~QGeoTiledMapReplyQGC();
     void abort();
+
+signals:
+    void terrainDone            (QByteArray responseBytes, QNetworkReply::NetworkError error);
 
 private slots:
     void networkReplyFinished   ();

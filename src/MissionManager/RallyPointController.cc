@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -25,10 +25,6 @@
 #include "AppSettings.h"
 #include "PlanMasterController.h"
 
-#ifndef __mobile__
-#include "QGCQFileDialog.h"
-#endif
-
 #include <QJsonDocument>
 #include <QJsonArray>
 
@@ -41,7 +37,7 @@ RallyPointController::RallyPointController(PlanMasterController* masterControlle
     : PlanElementController(masterController, parent)
     , _rallyPointManager(_managerVehicle->rallyPointManager())
     , _dirty(false)
-    , _currentRallyPoint(NULL)
+    , _currentRallyPoint(nullptr)
     , _itemsRequested(false)
 {
     connect(&_points, &QmlObjectListModel::countChanged, this, &RallyPointController::_updateContainsItems);
@@ -58,8 +54,9 @@ void RallyPointController::managerVehicleChanged(Vehicle* managerVehicle)
 {
     if (_managerVehicle) {
         _rallyPointManager->disconnect(this);
-        _managerVehicle = NULL;
-        _rallyPointManager = NULL;
+        _managerVehicle->disconnect(this);
+        _managerVehicle = nullptr;
+        _rallyPointManager = nullptr;
     }
 
     _managerVehicle = managerVehicle;
@@ -74,18 +71,37 @@ void RallyPointController::managerVehicleChanged(Vehicle* managerVehicle)
     connect(_rallyPointManager, &RallyPointManager::removeAllComplete,  this, &RallyPointController::_managerRemoveAllComplete);
     connect(_rallyPointManager, &RallyPointManager::inProgressChanged,  this, &RallyPointController::syncInProgressChanged);
 
-    emit rallyPointsSupportedChanged(rallyPointsSupported());
+    //-- RallyPointController::supported() tests both the capability bit AND the protocol version.
+    connect(_managerVehicle,    &Vehicle::capabilityBitsChanged,        this, &RallyPointController::supportedChanged);
+    connect(_managerVehicle,    &Vehicle::requestProtocolVersion,       this, &RallyPointController::supportedChanged);
+
+    emit supportedChanged(supported());
 }
 
 bool RallyPointController::load(const QJsonObject& json, QString& errorString)
 {
+    removeAll();
+
+    errorString.clear();
+
+    if (json.contains(JsonHelper::jsonVersionKey) && json[JsonHelper::jsonVersionKey].toInt() == 1) {
+        // We just ignore old version 1 data
+        return true;
+    }
+
+    QList<JsonHelper::KeyValidateInfo> keyInfoList = {
+        { JsonHelper::jsonVersionKey,   QJsonValue::Double, true },
+        { _jsonPointsKey,               QJsonValue::Array,  true },
+    };
+    if (!JsonHelper::validateKeys(json, keyInfoList, errorString)) {
+        return false;
+    }
+
     QString errorStr;
     QString errorMessage = tr("Rally: %1");
 
-    // Check for required keys
-    QStringList requiredKeys = { _jsonPointsKey };
-    if (!JsonHelper::validateRequiredKeys(json, requiredKeys, errorStr)) {
-        errorString = errorMessage.arg(errorStr);
+    if (json[JsonHelper::jsonVersionKey].toInt() != _jsonCurrentVersion) {
+        errorString = tr("Rally Points supports version %1").arg(_jsonCurrentVersion);
         return false;
     }
 
@@ -94,7 +110,7 @@ bool RallyPointController::load(const QJsonObject& json, QString& errorString)
         errorString = errorMessage.arg(errorStr);
         return false;
     }
-    _points.clearAndDeleteContents();
+
     QObjectList pointList;
     for (int i=0; i<rgPoints.count(); i++) {
         pointList.append(new RallyPoint(rgPoints[i], this));
@@ -109,7 +125,7 @@ bool RallyPointController::load(const QJsonObject& json, QString& errorString)
 
 void RallyPointController::save(QJsonObject& json)
 {
-    json[JsonHelper::jsonVersionKey] = 1;
+    json[JsonHelper::jsonVersionKey] = _jsonCurrentVersion;
 
     QJsonArray rgPoints;
     QJsonValue jsonPoint;
@@ -124,7 +140,7 @@ void RallyPointController::removeAll(void)
 {
     _points.clearAndDeleteContents();
     setDirty(true);
-    setCurrentRallyPoint(NULL);
+    setCurrentRallyPoint(nullptr);
 }
 
 void RallyPointController::removeAllFromVehicle(void)
@@ -185,15 +201,17 @@ QString RallyPointController::editorQml(void) const
     return _rallyPointManager->editorQml();
 }
 
-void RallyPointController::_managerLoadComplete(const QList<QGeoCoordinate> rgPoints)
+void RallyPointController::_managerLoadComplete(void)
 {
     // Fly view always reloads on _loadComplete
-    // Plan view only reloads on _loadComplete if specifically requested
-    if (!_editMode || _itemsRequested) {
+    // Plan view only reloads if:
+    //  - Load was specifically requested
+    //  - There is no current Plan
+    if (_flyView || _itemsRequested || isEmpty()) {
         _points.clearAndDeleteContents();
         QObjectList pointList;
-        for (int i=0; i<rgPoints.count(); i++) {
-            pointList.append(new RallyPoint(rgPoints[i], this));
+        for (int i=0; i<_rallyPointManager->points().count(); i++) {
+            pointList.append(new RallyPoint(_rallyPointManager->points()[i], this));
         }
         _points.swapObjectList(pointList);
         setDirty(false);
@@ -206,7 +224,7 @@ void RallyPointController::_managerLoadComplete(const QList<QGeoCoordinate> rgPo
 void RallyPointController::_managerSendComplete(bool error)
 {
     // Fly view always reloads after send
-    if (!error && _editMode) {
+    if (!error && _flyView) {
         showPlanFromManagerVehicle();
     }
 }
@@ -225,7 +243,12 @@ void RallyPointController::addPoint(QGeoCoordinate point)
     if (_points.count()) {
         defaultAlt = qobject_cast<RallyPoint*>(_points[_points.count() - 1])->coordinate().altitude();
     } else {
-        defaultAlt = qgcApp()->toolbox()->settingsManager()->appSettings()->defaultMissionItemAltitude()->rawValue().toDouble();
+        if(_masterController->controllerVehicle()->fixedWing()) {
+            defaultAlt = qgcApp()->toolbox()->settingsManager()->appSettings()->defaultMissionItemAltitude()->rawValue().toDouble();
+        }
+        else {
+            defaultAlt = RallyPoint::getDefaultFactAltitude();
+        }
     }
     point.setAltitude(defaultAlt);
     RallyPoint* newPoint = new RallyPoint(point, this);
@@ -234,9 +257,9 @@ void RallyPointController::addPoint(QGeoCoordinate point)
     setDirty(true);
 }
 
-bool RallyPointController::rallyPointsSupported(void) const
+bool RallyPointController::supported(void) const
 {
-    return _rallyPointManager->rallyPointsSupported();
+    return (_managerVehicle->capabilityBits() & MAV_PROTOCOL_CAPABILITY_MISSION_RALLY) && (_managerVehicle->maxProtoVersion() >= 200);
 }
 
 void RallyPointController::removePoint(QObject* rallyPoint)
@@ -254,7 +277,7 @@ void RallyPointController::removePoint(QObject* rallyPoint)
         newIndex = qMax(newIndex, 0);
         setCurrentRallyPoint(_points[newIndex]);
     } else {
-        setCurrentRallyPoint(NULL);
+        setCurrentRallyPoint(nullptr);
     }
 }
 
@@ -268,7 +291,7 @@ void RallyPointController::setCurrentRallyPoint(QObject* rallyPoint)
 
 void RallyPointController::_setFirstPointCurrent(void)
 {
-    setCurrentRallyPoint(_points.count() ? _points[0] : NULL);
+    setCurrentRallyPoint(_points.count() ? _points[0] : nullptr);
 }
 
 bool RallyPointController::containsItems(void) const
@@ -283,7 +306,7 @@ void RallyPointController::_updateContainsItems(void)
 
 bool RallyPointController::showPlanFromManagerVehicle (void)
 {
-    qCDebug(RallyPointControllerLog) << "showPlanFromManagerVehicle _editMode" << _editMode;
+    qCDebug(RallyPointControllerLog) << "showPlanFromManagerVehicle _flyView" << _flyView;
     if (_masterController->offline()) {
         qCWarning(RallyPointControllerLog) << "RallyPointController::showPlanFromManagerVehicle called while offline";
         return true;    // stops further propagation of showPlanFromManagerVehicle due to error
@@ -297,11 +320,15 @@ bool RallyPointController::showPlanFromManagerVehicle (void)
             qCDebug(RallyPointControllerLog) << "showPlanFromManagerVehicle: syncInProgress wait for signal";
             return true;
         } else {
-            // Fake a _loadComplete with the current items
-            qCDebug(RallyPointControllerLog) << "showPlanFromManagerVehicle: sync complete simulate signal";
+            qCDebug(RallyPointControllerLog) << "showPlanFromManagerVehicle: sync complete";
             _itemsRequested = true;
-            _managerLoadComplete(_rallyPointManager->points());
+            _managerLoadComplete();
             return false;
         }
     }
+}
+
+bool RallyPointController::isEmpty(void) const
+{
+    return _points.count() == 0;
 }

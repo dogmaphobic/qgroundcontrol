@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,7 +9,7 @@
 
 
 /// @file
-///     @author Gus Grubba <mavlink@grubba.com>
+///     @author Gus Grubba <gus@auterion.com>
 
 #ifndef OfflineMapsManager_H
 #define OfflineMapsManager_H
@@ -35,21 +35,19 @@ public:
         ActionExporting,
         ActionDone,
     };
-    Q_ENUMS(ImportAction)
+    Q_ENUM(ImportAction)
 
-    Q_PROPERTY(int                  tileX0          READ    tileX0          NOTIFY tileX0Changed)
-    Q_PROPERTY(int                  tileX1          READ    tileX1          NOTIFY tileX1Changed)
-    Q_PROPERTY(int                  tileY0          READ    tileY0          NOTIFY tileY0Changed)
-    Q_PROPERTY(int                  tileY1          READ    tileY1          NOTIFY tileY1Changed)
     Q_PROPERTY(quint64              tileCount       READ    tileCount       NOTIFY tileCountChanged)
     Q_PROPERTY(QString              tileCountStr    READ    tileCountStr    NOTIFY tileCountChanged)
     Q_PROPERTY(quint64              tileSize        READ    tileSize        NOTIFY tileSizeChanged)
     Q_PROPERTY(QString              tileSizeStr     READ    tileSizeStr     NOTIFY tileSizeChanged)
     Q_PROPERTY(QmlObjectListModel*  tileSets        READ    tileSets        NOTIFY tileSetsChanged)
     Q_PROPERTY(QStringList          mapList         READ    mapList         CONSTANT)
+    Q_PROPERTY(QStringList          mapProviderList READ    mapProviderList CONSTANT)
     Q_PROPERTY(quint32              maxMemCache     READ    maxMemCache     WRITE   setMaxMemCache  NOTIFY  maxMemCacheChanged)
     Q_PROPERTY(quint32              maxDiskCache    READ    maxDiskCache    WRITE   setMaxDiskCache NOTIFY  maxDiskCacheChanged)
     Q_PROPERTY(QString              errorMessage    READ    errorMessage    NOTIFY  errorMessageChanged)
+    Q_PROPERTY(bool                 fetchElevation  READ    fetchElevation  WRITE   setFetchElevation   NOTIFY  fetchElevationChanged)
     //-- Disk Space in MB
     Q_PROPERTY(quint32              freeDiskSpace   READ    freeDiskSpace   NOTIFY  freeDiskSpaceChanged)
     Q_PROPERTY(quint32              diskSpace       READ    diskSpace       CONSTANT)
@@ -75,19 +73,18 @@ public:
     Q_INVOKABLE bool                importSets              (QString path = QString());
     Q_INVOKABLE void                resetAction             ();
 
-    int                             tileX0                  () { return _totalSet.tileX0; }
-    int                             tileX1                  () { return _totalSet.tileX1; }
-    int                             tileY0                  () { return _totalSet.tileY0; }
-    int                             tileY1                  () { return _totalSet.tileY1; }
-    quint64                         tileCount               () { return _totalSet.tileCount; }
+    quint64                         tileCount               () { return _imageSet.tileCount + _elevationSet.tileCount; }
     QString                         tileCountStr            ();
-    quint64                         tileSize                () { return _totalSet.tileSize; }
+    quint64                         tileSize                () { return _imageSet.tileSize + _elevationSet.tileSize; }
     QString                         tileSizeStr             ();
     QStringList                     mapList                 ();
+    QStringList                     mapProviderList         ();
+    Q_INVOKABLE QStringList         mapTypeList             (QString provider);
     QmlObjectListModel*             tileSets                () { return &_tileSets; }
     quint32                         maxMemCache             ();
     quint32                         maxDiskCache            ();
     QString                         errorMessage            () { return _errorMessage; }
+    bool                            fetchElevation          () { return _fetchElevation; }
     quint64                         freeDiskSpace           () { return _freeDiskSpace; }
     quint64                         diskSpace               () { return _diskSpace; }
     int                             selectedCount           ();
@@ -100,21 +97,19 @@ public:
     void                            setImportReplace        (bool replace) { _importReplace = replace; emit importReplaceChanged(); }
     void                            setImportAction         (ImportAction action)  {_importAction = action; emit importActionChanged(); }
     void                            setErrorMessage         (const QString& error) { _errorMessage = error; emit errorMessageChanged(); }
+    void                            setFetchElevation       (bool fetchElevation) { _fetchElevation = fetchElevation; emit fetchElevationChanged(); }
 
     // Override from QGCTool
     void setToolbox(QGCToolbox *toolbox);
 
 signals:
-    void tileX0Changed          ();
-    void tileX1Changed          ();
-    void tileY0Changed          ();
-    void tileY1Changed          ();
     void tileCountChanged       ();
     void tileSizeChanged        ();
     void tileSetsChanged        ();
     void maxMemCacheChanged     ();
     void maxDiskCacheChanged    ();
     void errorMessageChanged    ();
+    void fetchElevationChanged  ();
     void freeDiskSpaceChanged   ();
     void selectedCountChanged   ();
     void actionProgressChanged  ();
@@ -137,7 +132,8 @@ private:
     void _updateDiskFreeSpace   ();
 
 private:
-    QGCTileSet  _totalSet;
+    QGCTileSet  _imageSet;
+    QGCTileSet  _elevationSet;
     double      _topleftLat;
     double      _topleftLon;
     double      _bottomRightLat;
@@ -149,6 +145,7 @@ private:
     quint32     _diskSpace;
     QmlObjectListModel _tileSets;
     QString     _errorMessage;
+    bool        _fetchElevation;
     int         _actionProgress;
     ImportAction _importAction;
     bool        _importReplace;

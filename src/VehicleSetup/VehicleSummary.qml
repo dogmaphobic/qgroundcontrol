@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -86,6 +86,7 @@ Rectangle {
                 text:           setupComplete ?
                     qsTr("Below you will find a summary of the settings for your vehicle. To the left are the setup menus for each component.") :
                     qsTr("WARNING: Your vehicle requires setup prior to flight. Please resolve the items marked in red using the menu on the left.")
+
                 property bool setupComplete: QGroundControl.multiVehicleManager.activeVehicle ? QGroundControl.multiVehicleManager.activeVehicle.autopilot.setupComplete : false
             }
 
@@ -127,10 +128,14 @@ Rectangle {
                                 height:                 width
                                 radius:                 width / 2
                                 color:                  modelData.setupComplete ? "#00d932" : "red"
-                                visible:                modelData.requiresSetup
+                                visible:                modelData.requiresSetup && modelData.setupSource !== ""
                             }
+
                             onClicked : {
-                                setupView.showVehicleComponentPanel(modelData)
+                                //console.log(modelData.setupSource)
+                                if (modelData.setupSource !== "") {
+                                    setupView.showVehicleComponentPanel(modelData)
+                                }
                             }
                         }
                         // Summary Qml

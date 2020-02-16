@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -42,9 +42,9 @@ class MissionCmdParamInfo : public QObject {
     Q_OBJECT
 
 public:
-    MissionCmdParamInfo(QObject* parent = NULL);
+    MissionCmdParamInfo(QObject* parent = nullptr);
 
-    MissionCmdParamInfo(const MissionCmdParamInfo& other, QObject* parent = NULL);
+    MissionCmdParamInfo(const MissionCmdParamInfo& other, QObject* parent = nullptr);
     const MissionCmdParamInfo& operator=(const MissionCmdParamInfo& other);
 
     Q_PROPERTY(int          decimalPlaces   READ decimalPlaces  CONSTANT)
@@ -105,9 +105,9 @@ class MissionCommandUIInfo : public QObject {
     Q_OBJECT
 
 public:
-    MissionCommandUIInfo(QObject* parent = NULL);
+    MissionCommandUIInfo(QObject* parent = nullptr);
 
-    MissionCommandUIInfo(const MissionCommandUIInfo& other, QObject* parent = NULL);
+    MissionCommandUIInfo(const MissionCommandUIInfo& other, QObject* parent = nullptr);
     const MissionCommandUIInfo& operator=(const MissionCommandUIInfo& other);
 
     Q_PROPERTY(QString  category                READ category               CONSTANT)
@@ -138,8 +138,11 @@ public:
     /// @return true: success, false: failure, errorString set
     bool loadJsonInfo(const QJsonObject& jsonObject, bool requireFullObject, QString& errorString);
 
-    /// Return param info for index, NULL for param should not be shown
-    const MissionCmdParamInfo* getParamInfo(int index) const;
+    /// Retruns parameter information for specified parameter
+    ///     @param index paremeter index to retrieve, 1-7
+    ///     @param showUI true: show parameter in editor, false: hide parameter in editor
+    /// @return Param info for index, NULL for none available
+    const MissionCmdParamInfo* getParamInfo(int index, bool& showUI) const;
 
 private:
     QString _loadErrorString(const QString& errorString) const;

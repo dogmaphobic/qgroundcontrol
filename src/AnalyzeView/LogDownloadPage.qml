@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -51,8 +51,7 @@ AnalyzePage {
 
             TableView {
                 id: tableView
-                anchors.top:        parent.top
-                anchors.bottom:     parent.bottom
+                Layout.fillHeight:  true
                 model:              logController.model
                 selectionMode:      SelectionMode.MultiSelection
                 Layout.fillWidth:   true
@@ -74,7 +73,7 @@ AnalyzePage {
                     title: qsTr("Date")
                     width: ScreenTools.defaultFontPixelWidth * 34
                     horizontalAlignment: Text.AlignHCenter
-                    delegate : Text  {
+                    delegate: Text  {
                         text: {
                             var o = logController.model.get(styleData.row)
                             if (o) {
@@ -118,25 +117,21 @@ AnalyzePage {
                     }
                 }
             }
-
             Column {
                 spacing:            _margin
                 Layout.alignment:   Qt.AlignTop | Qt.AlignLeft
-
                 QGCButton {
                     enabled:    !logController.requestingList && !logController.downloadingLogs
                     text:       qsTr("Refresh")
                     width:      _butttonWidth
-
                     onClicked: {
                         if (!QGroundControl.multiVehicleManager.activeVehicle || QGroundControl.multiVehicleManager.activeVehicle.isOfflineEditingVehicle) {
-                            logDownloadPage.showMessage(qsTr("Log Refresh"), qsTr("You must be connected to a vehicle in order to download logs."), StandardButton.Ok)
+                            mainWindow.showMessageDialog(qsTr("Log Refresh"), qsTr("You must be connected to a vehicle in order to download logs."))
                         } else {
                             logController.refresh()
                         }
                     }
                 }
-
                 QGCButton {
                     enabled:    !logController.requestingList && !logController.downloadingLogs && tableView.selection.count > 0
                     text:       qsTr("Download")
@@ -152,54 +147,46 @@ AnalyzePage {
                             var o = logController.model.get(rowIndex)
                             if (o) o.selected = true
                         })
-                        fileDialog.qgcView =        logDownloadPage
                         fileDialog.title =          qsTr("Select save directory")
                         fileDialog.selectExisting = true
-                        fileDialog.folder =         QGroundControl.settingsManager.appSettings.telemetrySavePath
+                        fileDialog.folder =         QGroundControl.settingsManager.appSettings.logSavePath
                         fileDialog.selectFolder =   true
                         fileDialog.openForLoad()
                     }
-
                     QGCFileDialog {
                         id: fileDialog
-
                         onAcceptedForLoad: {
                             logController.download(file)
                             close()
                         }
                     }
                 }
-
                 QGCButton {
                     enabled:    !logController.requestingList && !logController.downloadingLogs && logController.model.count > 0
                     text:       qsTr("Erase All")
                     width:      _butttonWidth
-                    onClicked:  logDownloadPage.showDialog(eraseAllMessage,
-                                                           qsTr("Delete All Log Files"),
-                                                           logDownloadPage.showDialogDefaultWidth,
-                                                           StandardButton.Yes | StandardButton.No)
-
+                    onClicked:  mainWindow.showComponentDialog(
+                        eraseAllMessage,
+                        qsTr("Delete All Log Files"),
+                        mainWindow.showDialogDefaultWidth,
+                        StandardButton.Yes | StandardButton.No)
                     Component {
                         id: eraseAllMessage
-
                         QGCViewMessage {
                             message:    qsTr("All log files will be erased permanently. Is this really what you want?")
-
                             function accept() {
-                                logDownloadPage.hideDialog()
                                 logController.eraseAll()
                             }
                         }
                     }
                 }
-
                 QGCButton {
                     text:       qsTr("Cancel")
                     width:      _butttonWidth
                     enabled:    logController.requestingList || logController.downloadingLogs
                     onClicked:  logController.cancel()
                 }
-            } // Column - Buttons
-        } // RowLayout
-    } // Component
-} // AnalyzePage
+            }
+        }
+    }
+}

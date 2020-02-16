@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -10,32 +10,27 @@
 #include "QGCApplication.h"
 #include "QGCCorePlugin.h"
 #include "QGCOptions.h"
-#include "QGCSettings.h"
+#include "QmlComponentInfo.h"
 #include "FactMetaData.h"
 #include "SettingsManager.h"
 #include "AppMessages.h"
+#include "QmlObjectListModel.h"
+#include "VideoManager.h"
+#include "VideoReceiver.h"
+#include "QGCLoggingCategory.h"
+#include "QGCCameraManager.h"
 
 #include <QtQml>
 #include <QQmlEngine>
 
 /// @file
 ///     @brief Core Plugin Interface for QGroundControl - Default Implementation
-///     @author Gus Grubba <mavlink@grubba.com>
+///     @author Gus Grubba <gus@auterion.com>
 
 class QGCCorePlugin_p
 {
 public:
     QGCCorePlugin_p()
-        : pGeneral(NULL)
-        , pCommLinks(NULL)
-        , pOfflineMaps(NULL)
-        , pMAVLink(NULL)
-        , pConsole(NULL)
-    #if defined(QT_DEBUG)
-        , pMockLink(NULL)
-        , pDebug(NULL)
-    #endif
-        , defaultOptions(NULL)
     {
     }
 
@@ -47,6 +42,18 @@ public:
             delete pCommLinks;
         if(pOfflineMaps)
             delete pOfflineMaps;
+#if defined(QGC_GST_TAISYNC_ENABLED)
+        if(pTaisync)
+            delete pTaisync;
+#endif
+#if defined(QGC_GST_MICROHARD_ENABLED)
+        if(pMicrohard)
+            delete pMicrohard;
+#endif
+#if defined(QGC_AIRMAP_ENABLED)
+        if(pAirmap)
+            delete pAirmap;
+#endif
         if(pMAVLink)
             delete pMAVLink;
         if(pConsole)
@@ -56,22 +63,46 @@ public:
             delete pMockLink;
         if(pDebug)
             delete pDebug;
+        if(pQmlTest)
+            delete pQmlTest;
 #endif
         if(defaultOptions)
             delete defaultOptions;
     }
 
-    QGCSettings* pGeneral;
-    QGCSettings* pCommLinks;
-    QGCSettings* pOfflineMaps;
-    QGCSettings* pMAVLink;
-    QGCSettings* pConsole;
-#if defined(QT_DEBUG)
-    QGCSettings* pMockLink;
-    QGCSettings* pDebug;
+    QmlComponentInfo* pGeneral                  = nullptr;
+    QmlComponentInfo* pCommLinks                = nullptr;
+    QmlComponentInfo* pOfflineMaps              = nullptr;
+#if defined(QGC_GST_TAISYNC_ENABLED)
+    QmlComponentInfo* pTaisync                  = nullptr;
 #endif
-    QVariantList settingsList;
-    QGCOptions*  defaultOptions;
+#if defined(QGC_GST_MICROHARD_ENABLED)
+    QmlComponentInfo* pMicrohard                = nullptr;
+#endif
+#if defined(QGC_AIRMAP_ENABLED)
+    QmlComponentInfo* pAirmap                   = nullptr;
+#endif
+    QmlComponentInfo* pMAVLink                  = nullptr;
+    QmlComponentInfo* pConsole                  = nullptr;
+    QmlComponentInfo* pHelp                     = nullptr;
+#if defined(QT_DEBUG)
+    QmlComponentInfo* pMockLink                 = nullptr;
+    QmlComponentInfo* pDebug                    = nullptr;
+    QmlComponentInfo* pQmlTest                  = nullptr;
+#endif
+
+    QmlComponentInfo*   valuesPageWidgetInfo    = nullptr;
+    QmlComponentInfo*   cameraPageWidgetInfo    = nullptr;
+    QmlComponentInfo*   videoPageWidgetInfo     = nullptr;
+    QmlComponentInfo*   healthPageWidgetInfo    = nullptr;
+    QmlComponentInfo*   vibrationPageWidgetInfo = nullptr;
+
+    QGCOptions*         defaultOptions          = nullptr;
+    QVariantList        settingsList;
+    QVariantList        analyzeList;
+    QVariantList        instrumentPageWidgetList;
+
+    QmlObjectListModel _emptyCustomMapItems;
 };
 
 QGCCorePlugin::~QGCCorePlugin()
@@ -95,43 +126,185 @@ void QGCCorePlugin::setToolbox(QGCToolbox *toolbox)
     QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     qmlRegisterUncreatableType<QGCCorePlugin>("QGroundControl.QGCCorePlugin", 1, 0, "QGCCorePlugin", "Reference only");
     qmlRegisterUncreatableType<QGCOptions>("QGroundControl.QGCOptions",       1, 0, "QGCOptions",    "Reference only");
+    //-- Handle Camera and Video Changes
+    connect(toolbox->multiVehicleManager(), &MultiVehicleManager::activeVehicleChanged, this, &QGCCorePlugin::_activeVehicleChanged);
+}
+
+void QGCCorePlugin::_activeVehicleChanged(Vehicle* activeVehicle)
+{
+    if(activeVehicle != _activeVehicle) {
+        if(_activeVehicle) {
+            disconnect(_activeVehicle, &Vehicle::dynamicCamerasChanged, this, &QGCCorePlugin::_dynamicCamerasChanged);
+        }
+        if(_dynamicCameras) {
+            disconnect(_dynamicCameras, &QGCCameraManager::currentCameraChanged, this, &QGCCorePlugin::_currentCameraChanged);
+            _dynamicCameras = nullptr;
+        }
+        _activeVehicle = activeVehicle;
+        if(_activeVehicle) {
+            connect(_activeVehicle, &Vehicle::dynamicCamerasChanged, this, &QGCCorePlugin::_dynamicCamerasChanged);
+        }
+    }
+}
+
+void QGCCorePlugin::_dynamicCamerasChanged()
+{
+    if(_currentCamera) {
+        disconnect(_currentCamera, &QGCCameraControl::autoStreamChanged, this, &QGCCorePlugin::_autoStreamChanged);
+        _currentCamera = nullptr;
+    }
+    if(_activeVehicle) {
+        _dynamicCameras = _activeVehicle->dynamicCameras();
+        if(_dynamicCameras) {
+            connect(_dynamicCameras, &QGCCameraManager::currentCameraChanged, this, &QGCCorePlugin::_currentCameraChanged);
+        }
+    }
+}
+
+void QGCCorePlugin::_currentCameraChanged()
+{
+    if(_dynamicCameras) {
+        QGCCameraControl* cp = _dynamicCameras->currentCameraInstance();
+        if(_currentCamera) {
+            disconnect(_currentCamera, &QGCCameraControl::autoStreamChanged, this, &QGCCorePlugin::_autoStreamChanged);
+        }
+        if(_currentCamera != cp) {
+            _currentCamera = cp;
+            connect(_currentCamera, &QGCCameraControl::autoStreamChanged, this, &QGCCorePlugin::_autoStreamChanged);
+        }
+    }
+}
+
+void QGCCorePlugin::_autoStreamChanged()
+{
+    _resetInstrumentPages();
+    emit instrumentPagesChanged();
+}
+
+void QGCCorePlugin::_resetInstrumentPages()
+{
+    if (_p->valuesPageWidgetInfo) {
+        _p->valuesPageWidgetInfo->deleteLater();
+        _p->valuesPageWidgetInfo = nullptr;
+    }
+    if(_p->cameraPageWidgetInfo) {
+        _p->cameraPageWidgetInfo->deleteLater();
+        _p->cameraPageWidgetInfo = nullptr;
+    }
+#if defined(QGC_GST_STREAMING)
+    if(_p->videoPageWidgetInfo) {
+        _p->videoPageWidgetInfo->deleteLater();
+        _p->videoPageWidgetInfo = nullptr;
+    }
+#endif
+    if(_p->healthPageWidgetInfo) {
+        _p->healthPageWidgetInfo->deleteLater();
+        _p->healthPageWidgetInfo = nullptr;
+    }
+    if(_p->vibrationPageWidgetInfo) {
+        _p->vibrationPageWidgetInfo->deleteLater();
+        _p->vibrationPageWidgetInfo = nullptr;
+    }
+    _p->instrumentPageWidgetList.clear();
 }
 
 QVariantList &QGCCorePlugin::settingsPages()
 {
-    //-- If this hasn't been overridden, create default set of settings
     if(!_p->pGeneral) {
-        //-- Default Settings
-        _p->pGeneral = new QGCSettings(tr("General"),
-                                       QUrl::fromUserInput("qrc:/qml/GeneralSettings.qml"),
-                                       QUrl::fromUserInput("qrc:/res/gear-white.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pGeneral));
-        _p->pCommLinks = new QGCSettings(tr("Comm Links"),
-                                         QUrl::fromUserInput("qrc:/qml/LinkSettings.qml"),
-                                         QUrl::fromUserInput("qrc:/res/waves.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pCommLinks));
-        _p->pOfflineMaps = new QGCSettings(tr("Offline Maps"),
-                                           QUrl::fromUserInput("qrc:/qml/OfflineMap.qml"),
-                                           QUrl::fromUserInput("qrc:/res/waves.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pOfflineMaps));
-        _p->pMAVLink = new QGCSettings(tr("MAVLink"),
-                                       QUrl::fromUserInput("qrc:/qml/MavlinkSettings.qml"),
-                                       QUrl::fromUserInput("qrc:/res/waves.svg"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pMAVLink));
-        _p->pConsole = new QGCSettings(tr("Console"),
-                                       QUrl::fromUserInput("qrc:/qml/QGroundControl/Controls/AppMessages.qml"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pConsole));
+        _p->pGeneral = new QmlComponentInfo(tr("General"),
+            QUrl::fromUserInput("qrc:/qml/GeneralSettings.qml"),
+            QUrl::fromUserInput("qrc:/res/gear-white.svg"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pGeneral)));
+        _p->pCommLinks = new QmlComponentInfo(tr("Comm Links"),
+            QUrl::fromUserInput("qrc:/qml/LinkSettings.qml"),
+            QUrl::fromUserInput("qrc:/res/waves.svg"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pCommLinks)));
+        _p->pOfflineMaps = new QmlComponentInfo(tr("Offline Maps"),
+            QUrl::fromUserInput("qrc:/qml/OfflineMap.qml"),
+            QUrl::fromUserInput("qrc:/res/waves.svg"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pOfflineMaps)));
+#if defined(QGC_GST_TAISYNC_ENABLED)
+        _p->pTaisync = new QmlComponentInfo(tr("Taisync"),
+            QUrl::fromUserInput("qrc:/qml/TaisyncSettings.qml"),
+            QUrl::fromUserInput(""));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pTaisync)));
+#endif
+#if defined(QGC_GST_MICROHARD_ENABLED)
+        _p->pMicrohard = new QmlComponentInfo(tr("Microhard"),
+            QUrl::fromUserInput("qrc:/qml/MicrohardSettings.qml"),
+            QUrl::fromUserInput(""));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pMicrohard)));
+#endif
+#if defined(QGC_AIRMAP_ENABLED)
+        _p->pAirmap = new QmlComponentInfo(tr("AirMap"),
+            QUrl::fromUserInput("qrc:/qml/AirmapSettings.qml"),
+            QUrl::fromUserInput(""));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pAirmap)));
+#endif
+        _p->pMAVLink = new QmlComponentInfo(tr("MAVLink"),
+            QUrl::fromUserInput("qrc:/qml/MavlinkSettings.qml"),
+            QUrl::fromUserInput("qrc:/res/waves.svg"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pMAVLink)));
+        _p->pConsole = new QmlComponentInfo(tr("Console"),
+            QUrl::fromUserInput("qrc:/qml/QGroundControl/Controls/AppMessages.qml"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pConsole)));
+        _p->pHelp = new QmlComponentInfo(tr("Help"),
+            QUrl::fromUserInput("qrc:/qml/HelpSettings.qml"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pHelp)));
 #if defined(QT_DEBUG)
         //-- These are always present on Debug builds
-        _p->pMockLink = new QGCSettings(tr("Mock Link"),
-                                        QUrl::fromUserInput("qrc:/qml/MockLink.qml"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pMockLink));
-        _p->pDebug = new QGCSettings(tr("Debug"),
-                                     QUrl::fromUserInput("qrc:/qml/DebugWindow.qml"));
-        _p->settingsList.append(QVariant::fromValue((QGCSettings*)_p->pDebug));
+        _p->pMockLink = new QmlComponentInfo(tr("Mock Link"),
+            QUrl::fromUserInput("qrc:/qml/MockLink.qml"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pMockLink)));
+        _p->pDebug = new QmlComponentInfo(tr("Debug"),
+            QUrl::fromUserInput("qrc:/qml/DebugWindow.qml"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pDebug)));
+        _p->pQmlTest = new QmlComponentInfo(tr("Palette Test"),
+            QUrl::fromUserInput("qrc:/qml/QmlTest.qml"));
+        _p->settingsList.append(QVariant::fromValue(reinterpret_cast<QmlComponentInfo*>(_p->pQmlTest)));
 #endif
     }
     return _p->settingsList;
+}
+
+QVariantList& QGCCorePlugin::instrumentPages()
+{
+    if (!_p->valuesPageWidgetInfo) {
+        _p->valuesPageWidgetInfo    = new QmlComponentInfo(tr("Values"),    QUrl::fromUserInput("qrc:/qml/ValuePageWidget.qml"));
+        _p->cameraPageWidgetInfo    = new QmlComponentInfo(tr("Camera"),    QUrl::fromUserInput("qrc:/qml/CameraPageWidget.qml"));
+#if defined(QGC_GST_STREAMING)
+        if(!_currentCamera || !_currentCamera->autoStream()) {
+            //-- Video Page Widget only available if using manual video streaming
+            _p->videoPageWidgetInfo = new QmlComponentInfo(tr("Video Stream"), QUrl::fromUserInput("qrc:/qml/VideoPageWidget.qml"));
+        }
+#endif
+        _p->healthPageWidgetInfo    = new QmlComponentInfo(tr("Health"),    QUrl::fromUserInput("qrc:/qml/HealthPageWidget.qml"));
+        _p->vibrationPageWidgetInfo = new QmlComponentInfo(tr("Vibration"), QUrl::fromUserInput("qrc:/qml/VibrationPageWidget.qml"));
+
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->valuesPageWidgetInfo));
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->cameraPageWidgetInfo));
+#if defined(QGC_GST_STREAMING)
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->videoPageWidgetInfo));
+#endif
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->healthPageWidgetInfo));
+        _p->instrumentPageWidgetList.append(QVariant::fromValue(_p->vibrationPageWidgetInfo));
+    }
+    return _p->instrumentPageWidgetList;
+}
+
+QVariantList& QGCCorePlugin::analyzePages()
+{
+    if (!_p->analyzeList.count()) {
+        _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("Log Download"),     QUrl::fromUserInput("qrc:/qml/LogDownloadPage.qml"),      QUrl::fromUserInput("qrc:/qmlimages/LogDownloadIcon"))));
+#if !defined(__mobile__)
+        _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("GeoTag Images"),    QUrl::fromUserInput("qrc:/qml/GeoTagPage.qml"),           QUrl::fromUserInput("qrc:/qmlimages/GeoTagIcon"))));
+#endif
+        _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("MAVLink Console"),  QUrl::fromUserInput("qrc:/qml/MavlinkConsolePage.qml"),   QUrl::fromUserInput("qrc:/qmlimages/MavlinkConsoleIcon"))));
+#if defined(QGC_ENABLE_MAVLINK_INSPECTOR)
+        _p->analyzeList.append(QVariant::fromValue(new QmlComponentInfo(tr("MAVLink Inspector"),QUrl::fromUserInput("qrc:/qml/MAVLinkInspectorPage.qml"), QUrl::fromUserInput("qrc:/qmlimages/MAVLinkInspector"))));
+#endif
+    }
+    return _p->analyzeList;
 }
 
 int QGCCorePlugin::defaultSettings()
@@ -155,8 +328,21 @@ bool QGCCorePlugin::overrideSettingsGroupVisibility(QString name)
     return true;
 }
 
-bool QGCCorePlugin::adjustSettingMetaData(FactMetaData& metaData)
+bool QGCCorePlugin::adjustSettingMetaData(const QString& settingsGroup, FactMetaData& metaData)
 {
+    if (settingsGroup != AppSettings::settingsGroup) {
+        // All changes refer to AppSettings
+#if !defined(QGC_ENABLE_PAIRING)
+        //-- If we don't support pairing, disable it.
+        if (metaData.name() == AppSettings::usePairingName) {
+            metaData.setRawDefaultValue(false);
+            //-- And hide the option
+            return false;
+        }
+#endif
+        return true;
+    }
+
     //-- Default Palette
     if (metaData.name() == AppSettings::indoorPaletteName) {
         QVariant outdoorPalette;
@@ -209,7 +395,7 @@ void QGCCorePlugin::paletteOverride(QString colorName, QGCPalette::PaletteColorI
     Q_UNUSED(colorInfo);
 }
 
-QString QGCCorePlugin::showAdvancedUIMessage(void) const
+QString QGCCorePlugin::showAdvancedUIMessage() const
 {
     return tr("WARNING: You are about to enter Advanced Mode. "
               "If used incorrectly, this may cause your vehicle to malfunction thus voiding your warranty. "
@@ -229,7 +415,7 @@ QQmlApplicationEngine* QGCCorePlugin::createRootWindow(QObject *parent)
     pEngine->addImportPath("qrc:/qml");
     pEngine->rootContext()->setContextProperty("joystickManager", qgcApp()->toolbox()->joystickManager());
     pEngine->rootContext()->setContextProperty("debugMessageModel", AppMessages::getModel());
-    pEngine->load(QUrl(QStringLiteral("qrc:/qml/MainWindowNative.qml")));
+    pEngine->load(QUrl(QStringLiteral("qrc:/qml/MainRootWindow.qml")));
     return pEngine;
 }
 
@@ -240,4 +426,34 @@ bool QGCCorePlugin::mavlinkMessage(Vehicle* vehicle, LinkInterface* link, mavlin
     Q_UNUSED(message);
 
     return true;
+}
+
+QmlObjectListModel* QGCCorePlugin::customMapItems()
+{
+    return &_p->_emptyCustomMapItems;
+}
+
+VideoManager* QGCCorePlugin::createVideoManager(QGCApplication *app, QGCToolbox *toolbox)
+{
+    return new VideoManager(app, toolbox);
+}
+
+VideoReceiver* QGCCorePlugin::createVideoReceiver(QObject* parent)
+{
+    return new VideoReceiver(parent);
+}
+
+bool QGCCorePlugin::guidedActionsControllerLogging() const
+{
+    return GuidedActionsControllerLog().isDebugEnabled();
+}
+
+QString QGCCorePlugin::stableVersionCheckFileUrl() const
+{
+#ifdef QGC_CUSTOM_BUILD
+    // Custom builds must override to turn on and provide their own location
+    return QString();
+#else
+    return QString("https://s3-us-west-2.amazonaws.com/qgroundcontrol/latest/QGC.version.txt");
+#endif
 }

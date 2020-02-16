@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,7 +11,7 @@
 /*!
     @file
        @brief Link specific configuration base class
-       @author Gus Grubba <mavlink@grubba.com>
+       @author Gus Grubba <gus@auterion.com>
 */
 
 #include "LinkConfiguration.h"
@@ -20,9 +20,7 @@
 #endif
 #include "UDPLink.h"
 #include "TCPLink.h"
-#if !defined(__mobile__)
 #include "LogReplayLink.h"
-#endif
 #ifdef QGC_ENABLE_BLUETOOTH
 #include "BluetoothLink.h"
 #endif
@@ -33,10 +31,11 @@
 #define LINK_SETTING_ROOT "LinkConfigurations"
 
 LinkConfiguration::LinkConfiguration(const QString& name)
-    : _link(NULL)
+    : _link(nullptr)
     , _name(name)
     , _dynamic(false)
     , _autoConnect(false)
+    , _highLatency(false)
 {
     _name = name;
     if (_name.isEmpty()) {
@@ -50,16 +49,18 @@ LinkConfiguration::LinkConfiguration(LinkConfiguration* copy)
     _name       = copy->name();
     _dynamic    = copy->isDynamic();
     _autoConnect= copy->isAutoConnect();
+    _highLatency= copy->isHighLatency();
     Q_ASSERT(!_name.isEmpty());
 }
 
 void LinkConfiguration::copyFrom(LinkConfiguration* source)
 {
-    Q_ASSERT(source != NULL);
+    Q_ASSERT(source != nullptr);
     _link       = source->link();
     _name       = source->name();
     _dynamic    = source->isDynamic();
     _autoConnect= source->isAutoConnect();
+    _highLatency= source->isHighLatency();
 }
 
 /*!
@@ -77,7 +78,7 @@ const QString LinkConfiguration::settingsRoot()
 */
 LinkConfiguration* LinkConfiguration::createSettings(int type, const QString& name)
 {
-    LinkConfiguration* config = NULL;
+    LinkConfiguration* config = nullptr;
     switch(type) {
 #ifndef NO_SERIAL_LINK
         case LinkConfiguration::TypeSerial:
@@ -95,11 +96,9 @@ LinkConfiguration* LinkConfiguration::createSettings(int type, const QString& na
         config = new BluetoothConfiguration(name);
         break;
 #endif
-#ifndef __mobile__
         case LinkConfiguration::TypeLogReplay:
             config = new LogReplayLinkConfiguration(name);
             break;
-#endif
 #ifdef QT_DEBUG
         case LinkConfiguration::TypeMock:
             config = new MockConfiguration(name);
@@ -115,36 +114,33 @@ LinkConfiguration* LinkConfiguration::createSettings(int type, const QString& na
 */
 LinkConfiguration* LinkConfiguration::duplicateSettings(LinkConfiguration* source)
 {
-    LinkConfiguration* dupe = NULL;
+    LinkConfiguration* dupe = nullptr;
     switch(source->type()) {
 #ifndef NO_SERIAL_LINK
         case TypeSerial:
-            dupe = new SerialConfiguration(dynamic_cast<SerialConfiguration*>(source));
+            dupe = new SerialConfiguration(qobject_cast<SerialConfiguration*>(source));
             break;
 #endif
         case TypeUdp:
-            dupe = new UDPConfiguration(dynamic_cast<UDPConfiguration*>(source));
+            dupe = new UDPConfiguration(qobject_cast<UDPConfiguration*>(source));
             break;
         case TypeTcp:
-            dupe = new TCPConfiguration(dynamic_cast<TCPConfiguration*>(source));
+            dupe = new TCPConfiguration(qobject_cast<TCPConfiguration*>(source));
             break;
 #ifdef QGC_ENABLE_BLUETOOTH
         case TypeBluetooth:
-            dupe = new BluetoothConfiguration(dynamic_cast<BluetoothConfiguration*>(source));
+            dupe = new BluetoothConfiguration(qobject_cast<BluetoothConfiguration*>(source));
             break;
 #endif
-#ifndef __mobile__
         case TypeLogReplay:
-            dupe = new LogReplayLinkConfiguration(dynamic_cast<LogReplayLinkConfiguration*>(source));
+            dupe = new LogReplayLinkConfiguration(qobject_cast<LogReplayLinkConfiguration*>(source));
             break;
-#endif
 #ifdef QT_DEBUG
         case TypeMock:
-            dupe = new MockConfiguration(dynamic_cast<MockConfiguration*>(source));
+            dupe = new MockConfiguration(qobject_cast<MockConfiguration*>(source));
             break;
 #endif
         case TypeLast:
-        default:
             break;
     }
     return dupe;

@@ -40,7 +40,7 @@
 ** 2015.4.4
 ** Adapted for use with QGroundControl
 **
-** Gus Grubba <mavlink@grubba.com>
+** Gus Grubba <gus@auterion.com>
 **
 ****************************************************************************/
 
@@ -51,13 +51,14 @@
 #include <QtLocation/private/qgeotilespec_p.h>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QFile>
+#include "TerrainTile.h"
 
 int QGeoTiledMapReplyQGC::_requestCount = 0;
 
 //-----------------------------------------------------------------------------
 QGeoTiledMapReplyQGC::QGeoTiledMapReplyQGC(QNetworkAccessManager *networkManager, const QNetworkRequest &request, const QGeoTileSpec &spec, QObject *parent)
     : QGeoTiledMapReply(spec, parent)
-    , _reply(NULL)
+    , _reply(nullptr)
     , _request(request)
     , _networkManager(networkManager)
 {
@@ -72,7 +73,7 @@ QGeoTiledMapReplyQGC::QGeoTiledMapReplyQGC(QNetworkAccessManager *networkManager
         setFinished(true);
         setCached(false);
     } else {
-        QGCFetchTileTask* task = getQGCMapEngine()->createFetchTileTask((UrlFactory::MapType)spec.mapId(), spec.x(), spec.y(), spec.zoom());
+        QGCFetchTileTask* task = getQGCMapEngine()->createFetchTileTask(getQGCMapEngine()->urlFactory()->getTypeFromId(spec.mapId()), spec.x(), spec.y(), spec.zoom());
         connect(task, &QGCFetchTileTask::tileFetched, this, &QGeoTiledMapReplyQGC::cacheReply);
         connect(task, &QGCMapTask::error, this, &QGeoTiledMapReplyQGC::cacheError);
         getQGCMapEngine()->addTask(task);
@@ -92,7 +93,7 @@ QGeoTiledMapReplyQGC::_clearReply()
     _timer.stop();
     if (_reply) {
         _reply->deleteLater();
-        _reply = 0;
+        _reply = nullptr;
         _requestCount--;
     }
 }
@@ -104,6 +105,7 @@ QGeoTiledMapReplyQGC::abort()
     _timer.stop();
     if (_reply)
         _reply->abort();
+    emit aborted();
 }
 
 //-----------------------------------------------------------------------------
@@ -112,19 +114,35 @@ QGeoTiledMapReplyQGC::networkReplyFinished()
 {
     _timer.stop();
     if (!_reply) {
+        emit aborted();
         return;
     }
     if (_reply->error() != QNetworkReply::NoError) {
+        emit aborted();
         return;
     }
     QByteArray a = _reply->readAll();
-    setMapImageData(a);
-    QString format = getQGCMapEngine()->urlFactory()->getImageFormat((UrlFactory::MapType)tileSpec().mapId(), a);
-    if(!format.isEmpty()) {
-        setMapImageFormat(format);
-        getQGCMapEngine()->cacheTile((UrlFactory::MapType)tileSpec().mapId(), tileSpec().x(), tileSpec().y(), tileSpec().zoom(), a, format);
+    QString format = getQGCMapEngine()->urlFactory()->getImageFormat(tileSpec().mapId(), a);
+    //-- Test for a specialized, elevation data (not map tile)
+    if( getQGCMapEngine()->urlFactory()->isElevation(tileSpec().mapId())){
+        a = TerrainTile::serialize(a);
+        //-- Cache it if valid
+        if(!a.isEmpty()) {
+            getQGCMapEngine()->cacheTile(
+                getQGCMapEngine()->urlFactory()->getTypeFromId(
+                    tileSpec().mapId()),
+                tileSpec().x(), tileSpec().y(), tileSpec().zoom(), a, format);
+        }
+        emit terrainDone(a, QNetworkReply::NoError);
+    } else {
+        //-- This is a map tile. Process and cache it if valid.
+        setMapImageData(a);
+        if(!format.isEmpty()) {
+            setMapImageFormat(format);
+            getQGCMapEngine()->cacheTile(getQGCMapEngine()->urlFactory()->getTypeFromId(tileSpec().mapId()), tileSpec().x(), tileSpec().y(), tileSpec().zoom(), a, format);
+        }
+        setFinished(true);
     }
-    setFinished(true);
     _clearReply();
 }
 
@@ -136,11 +154,17 @@ QGeoTiledMapReplyQGC::networkReplyError(QNetworkReply::NetworkError error)
     if (!_reply) {
         return;
     }
-    if (error != QNetworkReply::OperationCanceledError) {
-        qWarning() << "Fetch tile error:" << _reply->errorString();
-        setError(QGeoTiledMapReply::CommunicationError, _reply->errorString());
+    //-- Test for a specialized, elevation data (not map tile)
+    if( getQGCMapEngine()->urlFactory()->isElevation(tileSpec().mapId())){
+        emit terrainDone(QByteArray(), error);
+    } else {
+        //-- Regular map tile
+        if (error != QNetworkReply::OperationCanceledError) {
+            qWarning() << "Fetch tile error:" << _reply->errorString();
+            setError(QGeoTiledMapReply::CommunicationError, _reply->errorString());
+        }
+        setFinished(true);
     }
-    setFinished(true);
     _clearReply();
 }
 
@@ -149,8 +173,12 @@ void
 QGeoTiledMapReplyQGC::cacheError(QGCMapTask::TaskType type, QString /*errorString*/)
 {
     if(!getQGCMapEngine()->isInternetActive()) {
-        setError(QGeoTiledMapReply::CommunicationError, "Network not available");
-        setFinished(true);
+        if( getQGCMapEngine()->urlFactory()->isElevation(tileSpec().mapId())){
+            emit terrainDone(QByteArray(), QNetworkReply::NetworkSessionFailedError);
+        } else {
+            setError(QGeoTiledMapReply::CommunicationError, "Network not available");
+            setFinished(true);
+        }
     } else {
         if(type != QGCMapTask::taskFetchTile) {
             qWarning() << "QGeoTiledMapReplyQGC::cacheError() for wrong task";
@@ -163,8 +191,8 @@ QGeoTiledMapReplyQGC::cacheError(QGCMapTask::TaskType type, QString /*errorStrin
         _networkManager->setProxy(tProxy);
 #endif
         _reply = _networkManager->get(_request);
-        _reply->setParent(0);
-        connect(_reply, SIGNAL(finished()),                         this, SLOT(networkReplyFinished()));
+        _reply->setParent(nullptr);
+        connect(_reply, &QNetworkReply::finished, this, &QGeoTiledMapReplyQGC::networkReplyFinished);
         connect(_reply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(networkReplyError(QNetworkReply::NetworkError)));
 #if !defined(__mobile__)
         _networkManager->setProxy(proxy);
@@ -181,10 +209,16 @@ QGeoTiledMapReplyQGC::cacheError(QGCMapTask::TaskType type, QString /*errorStrin
 void
 QGeoTiledMapReplyQGC::cacheReply(QGCCacheTile* tile)
 {
-    setMapImageData(tile->img());
-    setMapImageFormat(tile->format());
-    setFinished(true);
-    setCached(true);
+    //-- Test for a specialized, elevation data (not map tile)
+    if( getQGCMapEngine()->urlFactory()->isElevation(tileSpec().mapId())){
+        emit terrainDone(tile->img(), QNetworkReply::NoError);
+    } else {
+        //-- Regular map tile
+        setMapImageData(tile->img());
+        setMapImageFormat(tile->format());
+        setFinished(true);
+        setCached(true);
+    }
     tile->deleteLater();
 }
 
@@ -195,4 +229,5 @@ QGeoTiledMapReplyQGC::timeout()
     if(_reply) {
         _reply->abort();
     }
+    emit aborted();
 }

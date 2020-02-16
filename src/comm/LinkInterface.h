@@ -1,14 +1,13 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
 
-#ifndef _LINKINTERFACE_H_
-#define _LINKINTERFACE_H_
+#pragma once
 
 #include <QThread>
 #include <QDateTime>
@@ -17,16 +16,17 @@
 #include <QMetaType>
 #include <QSharedPointer>
 #include <QDebug>
+#include <QTimer>
 
 #include "QGCMAVLink.h"
 #include "LinkConfiguration.h"
+#include "MavlinkMessagesTimer.h"
 
 class LinkManager;
 
 /**
-* The link interface defines the interface for all links used to communicate
-* with the groundstation application.
-*
+* @brief The link interface defines the interface for all links used to communicate
+* with the ground station application.
 **/
 class LinkInterface : public QThread
 {
@@ -36,13 +36,20 @@ class LinkInterface : public QThread
     friend class LinkManager;
 
 public:    
-    ~LinkInterface() { _config->setLink(NULL); }
+    virtual ~LinkInterface() {
+        stopMavlinkMessagesTimer();
+        _config->setLink(nullptr);
+    }
 
-    Q_PROPERTY(bool active      READ active         WRITE setActive         NOTIFY activeChanged)
+    Q_PROPERTY(bool active      READ active     NOTIFY activeChanged)
+    Q_PROPERTY(bool isPX4Flow   READ isPX4Flow  CONSTANT)
+
+    Q_INVOKABLE bool link_active(int vehicle_id) const;
+    Q_INVOKABLE bool getHighLatency(void) const { return _highLatency; }
 
     // Property accessors
-    bool active(void)           { return _active; }
-    void setActive(bool active) { _active = active; emit activeChanged(active); }
+    bool active() const;
+    bool isPX4Flow(void) const { return _isPX4Flow; }
 
     LinkConfiguration* getLinkConfiguration(void) { return _config.data(); }
 
@@ -51,7 +58,7 @@ public:
     /**
      * @brief Get the human readable name of this link
      */
-    virtual QString getName() const = 0;
+    Q_INVOKABLE virtual QString getName() const = 0;
 
     virtual void requestReset() = 0;
 
@@ -79,7 +86,7 @@ public:
     virtual bool isLogReplay(void) { return false; }
 
     /**
-     * @Enable/Disable data rate collection
+     * @Brief Enable/Disable data rate collection
      **/
     void enableDataRate(bool enable)
     {
@@ -116,6 +123,11 @@ public:
     /// set into the link when it is added to LinkManager
     uint8_t mavlinkChannel(void) const;
 
+    /// Returns whether this link is high latency or not. High latency links should only perform
+    /// minimal communication with vehicle.
+    ///     signals: highLatencyChanged
+    bool highLatency(void) const { return _highLatency; }
+
     bool decodedFirstMavlinkPacket(void) const { return _decodedFirstMavlinkPacket; }
     bool setDecodedFirstMavlinkPacket(bool decodedFirstMavlinkPacket) { return _decodedFirstMavlinkPacket = decodedFirstMavlinkPacket; }
 
@@ -134,8 +146,8 @@ public slots:
      * communication arbitrary byte lengths can be written. The method ensures
      * thread safety regardless of the underlying LinkInterface implementation.
      *
-     * @param bytes The pointer to the byte array containing the data
-     * @param length The length of the data array
+     * @param bytes:  The pointer to the byte array containing the data
+     * @param length: The length of the data array
      **/
     void writeBytesSafe(const char *bytes, int length)
     {
@@ -144,11 +156,14 @@ public slots:
 
 private slots:
     virtual void _writeBytes(const QByteArray) = 0;
+
+    void _activeChanged(bool active, int vehicle_id);
     
 signals:
     void autoconnectChanged(bool autoconnect);
-    void activeChanged(bool active);
+    void activeChanged(LinkInterface* link, bool active, int vehicle_id);
     void _invokeWriteBytes(QByteArray);
+    void highLatencyChanged(bool highLatency);
 
     /// Signalled when a link suddenly goes away due to it being removed by for example pulling the cable to the connection.
     void connectionRemoved(LinkInterface* link);
@@ -161,9 +176,21 @@ signals:
      * affect performance, for control links it is however desirable to directly
      * forward the link data.
      *
-     * @param data the new bytes
+     * @param link: Link where the data is coming from
+     * @param data: The data received
      */
     void bytesReceived(LinkInterface* link, QByteArray data);
+
+    /**
+     * @brief New data has been sent
+     * *
+     * The new data is contained in the QByteArray data.
+     * The data is logged into telemetry logging system
+     *
+     * @param link: Link used
+     * @param data: The data sent
+     */
+    void bytesSent(LinkInterface* link, QByteArray data);
 
     /**
      * @brief This signal is emitted instantly when the link is connected
@@ -187,7 +214,7 @@ signals:
 
 protected:
     // Links are only created by LinkManager so constructor is not public
-    LinkInterface(SharedLinkConfigurationPointer& config);
+    LinkInterface(SharedLinkConfigurationPointer& config, bool isPX4Flow = false);
 
     /// This function logs the send times and amounts of datas for input. Data is used for calculating
     /// the transmission rate.
@@ -202,7 +229,8 @@ protected:
     void _logOutputDataRate(quint64 byteCount, qint64 time);
 
     SharedLinkConfigurationPointer _config;
-    
+    bool _highLatency;
+
 private:
     /**
      * @brief logDataRateToBuffer Stores transmission times/amounts for statistics
@@ -241,10 +269,25 @@ private:
     virtual bool _connect(void) = 0;
 
     virtual void _disconnect(void) = 0;
-    
+
     /// Sets the mavlink channel to use for this link
     void _setMavlinkChannel(uint8_t channel);
     
+    /**
+     * @brief startMavlinkMessagesTimer
+     *
+     * Start/restart the mavlink messages timer for the specific vehicle.
+     * If no timer exists an instance is allocated.
+     */
+    void startMavlinkMessagesTimer(int vehicle_id);
+
+    /**
+     * @brief stopMavlinkMessagesTimer
+     *
+     * Stop and deallocate the mavlink messages timers for all vehicles if any exists.
+     */
+    void stopMavlinkMessagesTimer();
+
     bool _mavlinkChannelSet;    ///< true: _mavlinkChannel has been set
     uint8_t _mavlinkChannel;    ///< mavlink channel to use for this link, as used by mavlink_parse_char
     
@@ -266,11 +309,12 @@ private:
     
     mutable QMutex _dataRateMutex; // Mutex for accessing the data rate member variables
 
-    bool _active;                       ///< true: link is actively receiving mavlink messages
     bool _enableRateCollection;
     bool _decodedFirstMavlinkPacket;    ///< true: link has correctly decoded it's first mavlink packet
+    bool _isPX4Flow;
+
+    QMap<int /* vehicle id */, MavlinkMessagesTimer*> _mavlinkMessagesTimers;
 };
 
 typedef QSharedPointer<LinkInterface> SharedLinkInterfacePointer;
 
-#endif // _LINKINTERFACE_H_

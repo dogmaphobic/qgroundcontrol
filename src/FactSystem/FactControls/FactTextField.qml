@@ -16,40 +16,31 @@ QGCTextField {
     showUnits:  true
     showHelp:   true
 
+    signal updated()
+
     property Fact   fact: null
 
     property string _validateString
 
-    // At this point all Facts are numeric
     inputMethodHints: ((fact && fact.typeIsString) || ScreenTools.isiOS) ?
                           Qt.ImhNone :                // iOS numeric keyboard has no done button, we can't use it
                           Qt.ImhFormattedNumbersOnly  // Forces use of virtual numeric keyboard
 
     onEditingFinished: {
-        if (ScreenTools.isMobile) {
-            // Toss focus on mobile after Done on virtual keyboard. Prevent strange interactions.
-            focus = false
-        }
-        if (typeof qgcView !== 'undefined' && qgcView) {
-            var errorString = fact.validate(text, false /* convertOnly */)
-            if (errorString == "") {
-                fact.value = text
-            } else {
-                _validateString = text
-                qgcView.showDialog(validationErrorDialogComponent, qsTr("Invalid Value"), qgcView.showDialogDefaultWidth, StandardButton.Save)
-            }
-        } else {
+        var errorString = fact.validate(text, false /* convertOnly */)
+        if (errorString === "") {
             fact.value = text
-            fact.valueChanged(fact.value)
+            _textField.updated()
+        } else {
+            _validateString = text
+            mainWindow.showComponentDialog(validationErrorDialogComponent, qsTr("Invalid Value"), mainWindow.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
         }
     }
 
-    onHelpClicked: qgcView.showDialog(helpDialogComponent, qsTr("Value Details"), qgcView.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
-
+    onHelpClicked: mainWindow.showComponentDialog(helpDialogComponent, qsTr("Value Details"), mainWindow.showDialogDefaultWidth, StandardButton.Save | StandardButton.Cancel)
 
     Component {
         id: validationErrorDialogComponent
-
         ParameterEditorDialog {
             validate:       true
             validateValue:  _validateString
@@ -59,7 +50,6 @@ QGCTextField {
 
     Component {
         id: helpDialogComponent
-
         ParameterEditorDialog {
             fact: _textField.fact
         }

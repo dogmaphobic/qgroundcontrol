@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -169,7 +169,7 @@ Item {
 
         QGCMapLabel {
             id:                     polygonHelp
-            anchors.topMargin:      parent.height - ScreenTools.availableHeight
+            anchors.topMargin:      parent.height - mainWindow.height
             anchors.top:            parent.top
             anchors.left:           parent.left
             anchors.right:          parent.right
@@ -233,7 +233,7 @@ Item {
 
                     var clickCoordinate = map.toCoordinate(Qt.point(mouse.x, mouse.y), false /* clipToViewPort */)
                     var polygonPath = _newPolygon.path
-                    if (polygonPath.length == 0) {
+                    if (polygonPath.length === 0) {
                         // Add first coordinate
                         polygonPath.push(clickCoordinate)
                     } else {
@@ -252,10 +252,10 @@ Item {
                     _currentPolygon.path = polygonPath
                     _newPolygon.path = polygonPath
 
-                    if (_mobile && _currentPolygon.path.length == 1) {
+                    if (_mobile && _currentPolygon.path.length === 1) {
                         _mobilePoint.coordinate = _currentPolygon.path[0]
                         _mobilePoint.visible = true
-                    } else if (_mobile && _currentPolygon.path.length == 2) {
+                    } else if (_mobile && _currentPolygon.path.length === 2) {
                         // Show initial line segment on mobile
                         _mobileSegment.path = [ _currentPolygon.path[0], _currentPolygon.path[1] ]
                         _mobileSegment.visible = true

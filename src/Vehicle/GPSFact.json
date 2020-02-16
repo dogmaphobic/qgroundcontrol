@@ -1,5 +1,22 @@
 [
 {
+    "name":             "lat",
+    "shortDescription": "Latitude",
+    "type":             "double",
+    "decimalPlaces":    7
+},
+{
+    "name":             "lon",
+    "shortDescription": "Longitude",
+    "type":             "double",
+    "decimalPlaces":    7
+},
+{
+    "name":             "mgrs",
+    "shortDescription": "MGRS Position",
+    "type":             "string"
+},
+{
     "name":             "hdop",
     "shortDescription": "HDOP",
     "type":             "double",

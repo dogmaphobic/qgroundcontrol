@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -15,27 +15,28 @@
 
 /// @file
 ///     @brief Battery, propeller and magnetometer settings
-///     @author Gus Grubba <mavlink@grubba.com>
+///     @author Gus Grubba <gus@auterion.com>
 
 class PowerComponent : public VehicleComponent
 {
     Q_OBJECT
     
 public:
-    PowerComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent = NULL);
+    PowerComponent(Vehicle* vehicle, AutoPilotPlugin* autopilot, QObject* parent = nullptr);
     
-    // Virtuals from VehicleComponent
-    virtual QStringList setupCompleteChangedTriggerList(void) const;
+    // Overrides from VehicleComponent
+    QStringList setupCompleteChangedTriggerList(void) const override;
     
-    // Virtuals from VehicleComponent
-    virtual QString     name                    (void) const;
-    virtual QString     description             (void) const;
-    virtual QString     iconResource            (void) const;
-    virtual bool        requiresSetup           (void) const;
-    virtual bool        setupComplete           (void) const;
-    virtual QUrl        setupSource             (void) const;
-    virtual QUrl        summaryQmlSource        (void) const;
-    
+    // Overrides from VehicleComponent
+    QString name                    (void) const override;
+    QString description             (void) const override;
+    QString iconResource            (void) const override;
+    bool    requiresSetup           (void) const override;
+    bool    setupComplete           (void) const override;
+    QUrl    setupSource             (void) const override;
+    QUrl    summaryQmlSource        (void) const override;
+    bool    allowSetupWhileArmed    (void) const override { return true; }
+
 private:
     const QString   _name;
     QVariantList    _summaryItems;

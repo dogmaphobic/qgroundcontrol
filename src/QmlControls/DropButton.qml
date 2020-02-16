@@ -17,7 +17,7 @@ Item {
     property int    dropDirection:      dropDown
     property alias  dropDownComponent:  dropDownLoader.sourceComponent
     property real   viewportMargins:    0
-    property real   topMargin:          parent.height - ScreenTools.availableHeight
+    property real   topMargin:          parent.height - mainWindow.height
     property alias  lightBorders:       roundButton.lightBorders
 
     width:  radius * 2
@@ -175,9 +175,9 @@ Item {
             id:             arrowCanvas
             anchors.fill:   parent
 
-            property var arrowPoint: Qt.point(0, 0)
-            property var arrowBase1: Qt.point(0, 0)
-            property var arrowBase2: Qt.point(0, 0)
+            property point arrowPoint: Qt.point(0, 0)
+            property point arrowBase1: Qt.point(0, 0)
+            property point arrowBase2: Qt.point(0, 0)
 
             onPaint: {
                 var context = getContext("2d")

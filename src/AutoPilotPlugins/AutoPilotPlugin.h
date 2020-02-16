@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -19,7 +19,6 @@
 #include "FactSystem.h"
 #include "Vehicle.h"
 
-class ParameterManager;
 class Vehicle;
 class FirmwarePlugin;
 
@@ -60,13 +59,13 @@ signals:
 
 protected:
     /// All access to AutoPilotPugin objects is through getInstanceForAutoPilotPlugin
-    AutoPilotPlugin(QObject* parent = NULL) : QObject(parent) { }
+    AutoPilotPlugin(QObject* parent = nullptr) : QObject(parent) { }
 
     Vehicle*        _vehicle;
     FirmwarePlugin* _firmwarePlugin;
     bool            _setupComplete;
 
-private:
+private slots:
     void _recalcSetupComplete(void);
 };
 

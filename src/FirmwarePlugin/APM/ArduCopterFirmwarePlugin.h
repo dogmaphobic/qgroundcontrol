@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -41,8 +41,11 @@ public:
         THROW       = 18,
         AVOID_ADSB  = 19,
         GUIDED_NOGPS= 20,
+        SMART_RTL   = 21,  // SMART_RTL returns to home by retracing its steps
+        FLOWHOLD    = 22,  // FLOWHOLD holds position with optical flow without rangefinder
+        FOLLOW      = 23,  // follow attempts to follow another vehicle or ground station
+        ZIGZAG      = 24,  // ZIGZAG mode is able to fly in a zigzag manner with predefined point A and point B
     };
-    static const int modeCount = 21;
 
     APMCopterMode(uint32_t mode, bool settable);
 };
@@ -55,34 +58,24 @@ public:
     ArduCopterFirmwarePlugin(void);
 
     // Overrides from FirmwarePlugin
-    bool    isCapable                           (const Vehicle *vehicle, FirmwareCapabilities capabilities) final;
-    void    setGuidedMode                       (Vehicle* vehicle, bool guidedMode) final;
-    void    pauseVehicle                        (Vehicle* vehicle) final;
-    void    guidedModeRTL                       (Vehicle* vehicle) final;
     void    guidedModeLand                      (Vehicle* vehicle) final;
-    void    guidedModeTakeoff                   (Vehicle* vehicle) final;
-    void    guidedModeGotoLocation              (Vehicle* vehicle, const QGeoCoordinate& gotoCoord) final;
-    void    guidedModeChangeAltitude            (Vehicle* vehicle, double altitudeChange) final;
     const FirmwarePlugin::remapParamNameMajorVersionMap_t& paramNameRemapMajorVersionMap(void) const final { return _remapParamName; }
     int     remapParamNameHigestMinorVersionNumber(int majorVersionNumber) const final;
     bool    multiRotorCoaxialMotors             (Vehicle* vehicle) final;
     bool    multiRotorXConfig                   (Vehicle* vehicle) final;
-    QString geoFenceRadiusParam                 (Vehicle* vehicle) final;
     QString offlineEditingParamFile             (Vehicle* vehicle) final { Q_UNUSED(vehicle); return QStringLiteral(":/FirmwarePlugin/APM/Copter.OfflineEditing.params"); }
-    QString pauseFlightMode                     (void) const override { return QString("Brake"); }
-    QString missionFlightMode                   (void) const override { return QString("Auto"); }
-    QString rtlFlightMode                       (void) const override { return QString("RTL"); }
-    QString landFlightMode                      (void) const override { return QString("Land"); }
-    QString takeControlFlightMode               (void) const override { return QString("Loiter"); }
-    bool    vehicleYawsToNextWaypointInMission  (const Vehicle* vehicle) const final;
-    QString autoDisarmParameter                 (Vehicle* vehicle) final { Q_UNUSED(vehicle); return QStringLiteral("DISARM_DELAY"); }
-    void    startMission                        (Vehicle* vehicle) override;
+    QString pauseFlightMode                     (void) const override { return QStringLiteral("Brake"); }
+    QString landFlightMode                      (void) const override { return QStringLiteral("Land"); }
+    QString takeControlFlightMode               (void) const override { return QStringLiteral("Loiter"); }
+    QString followFlightMode                    (void) const override { return QStringLiteral("Follow"); }
+    bool    vehicleYawsToNextWaypointInMission  (const Vehicle* vehicle) const override;
+    QString autoDisarmParameter                 (Vehicle* vehicle) override { Q_UNUSED(vehicle); return QStringLiteral("DISARM_DELAY"); }
+    bool    supportsSmartRTL                    (void) const override { return true; }
+    void    sendGCSMotionReport                 (Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities) override;
 
 private:
     static bool _remapParamNameIntialized;
     static FirmwarePlugin::remapParamNameMajorVersionMap_t  _remapParamName;
-
-    bool _guidedModeTakeoff(Vehicle* vehicle);
 };
 
 #endif

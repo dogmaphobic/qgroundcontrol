@@ -1,11 +1,12 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
  *
  ****************************************************************************/
+
 
 import QtQuick 2.3
 
@@ -17,129 +18,74 @@ import QGroundControl.FlightMap     1.0
 import QGroundControl.Palette       1.0
 
 Rectangle {
-    id:             instrumentPanel
-    height:         instrumentColumn.height + (_topBottomMargin * 2)
+    id:             root
     width:          getPreferredInstrumentWidth()
-    radius:         _showLargeCompass ? width / 2 :  ScreenTools.defaultFontPixelWidth / 2
-    color:          _backgroundColor
-    border.width:   _showLargeCompass ? 1 : 0
+    height:         _outerRadius * 2
+    radius:         _outerRadius
+    color:          qgcPal.window
+    border.width:   1
     border.color:   _isSatellite ? qgcPal.mapWidgetBorderLight : qgcPal.mapWidgetBorderDark
 
-    property var    _qgcView:               qgcView
-    property real   _maxHeight:             maxHeight
-    property real   _defaultSize:           ScreenTools.defaultFontPixelHeight * (9)
-    property color  _backgroundColor:       qgcPal.window
-    property real   _spacing:               ScreenTools.defaultFontPixelHeight * 0.33
-    property real   _topBottomMargin:       (width * 0.05) / 2
-    property real   _availableValueHeight:  _maxHeight - (outerCompass.height + _spacer1.height + _spacer2.height + (_spacing * 4)) - (_showLargeCompass ? compass.height : 0)
-    property var    _activeVehicle:         QGroundControl.multiVehicleManager.activeVehicle
-    property bool   _showLargeCompass:      QGroundControl.settingsManager.appSettings.showLargeCompass.value
+    property real   _innerRadius:       (width - (_topBottomMargin * 3)) / 4
+    property real   _outerRadius:       _innerRadius + _topBottomMargin
+    property real   _defaultSize:       ScreenTools.defaultFontPixelHeight * (9)
+    property real   _sizeRatio:         ScreenTools.isTinyScreen ? (width / _defaultSize) * 0.5 : width / _defaultSize
+    property real   _bigFontSize:       ScreenTools.defaultFontPointSize * 2.5  * _sizeRatio
+    property real   _normalFontSize:    ScreenTools.defaultFontPointSize * 1.5  * _sizeRatio
+    property real   _labelFontSize:     ScreenTools.defaultFontPointSize * 0.75 * _sizeRatio
+    property real   _spacing:           ScreenTools.defaultFontPixelHeight * 0.33
+    property real   _topBottomMargin:   (width * 0.05) / 2
+    property real   _availableValueHeight: maxHeight - (root.height + _valuesItem.anchors.topMargin)
 
-    readonly property real _outerRingRatio: 0.95
-    readonly property real _innerRingRatio: 0.80
+    // Prevent all clicks from going through to lower layers
+    DeadMouseArea {
+        anchors.fill: parent
+    }
 
     QGCPalette { id: qgcPal }
 
-    MouseArea {
-        anchors.fill: parent
-        onClicked: _valuesWidget.showPicker()
+    QGCAttitudeWidget {
+        id:                 attitude
+        anchors.leftMargin: _topBottomMargin
+        anchors.left:       parent.left
+        size:               _innerRadius * 2
+        vehicle:            activeVehicle
+        anchors.verticalCenter: parent.verticalCenter
     }
 
-    Column {
-        id:                 instrumentColumn
-        anchors.topMargin:  _topBottomMargin
-        anchors.top:        parent.top
-        anchors.left:       parent.left
-        anchors.right:      parent.right
-        spacing:            _spacing
+    QGCCompassWidget {
+        id:                 compass
+        anchors.leftMargin: _spacing
+        anchors.left:       attitude.right
+        size:               _innerRadius * 2
+        vehicle:            activeVehicle
+        anchors.verticalCenter: parent.verticalCenter
+    }
 
-        Item {
-            width:  parent.width
-            height: outerCompass.height
+    Item {
+        id:                 _valuesItem
+        anchors.topMargin:  ScreenTools.defaultFontPixelHeight / 4
+        anchors.top:        parent.bottom
+        width:              parent.width
+        height:             _valuesWidget.height
+        visible:            widgetRoot.showValues
 
-            CompassRing {
-                id:                 outerCompass
-                size:               parent.width * _outerRingRatio
-                vehicle:            _activeVehicle
-                anchors.horizontalCenter: parent.horizontalCenter
-                visible:            !_showLargeCompass
-
-            }
-
-            QGCAttitudeWidget {
-                id:                 attitudeWidget
-                size:               parent.width * (_showLargeCompass ? _outerRingRatio : _innerRingRatio)
-                vehicle:            _activeVehicle
-                anchors.centerIn:   outerCompass
-                showHeading:        !_showLargeCompass
-            }
-
-            Image {
-                id:                 gearThingy
-                anchors.bottom:     outerCompass.bottom
-                anchors.right:      outerCompass.right
-                source:             qgcPal.globalTheme == QGCPalette.Light ? "/res/gear-black.svg" : "/res/gear-white.svg"
-                mipmap:             true
-                opacity:            0.5
-                width:              outerCompass.width * 0.15
-                sourceSize.width:   width
-                fillMode:           Image.PreserveAspectFit
-                MouseArea {
-                    anchors.fill:   parent
-                    hoverEnabled:   true
-                    onEntered:      gearThingy.opacity = 0.85
-                    onExited:       gearThingy.opacity = 0.5
-                    onClicked:      _valuesWidget.showPicker()
-                }
-            }
+        // Prevent all clicks from going through to lower layers
+        DeadMouseArea {
+            anchors.fill: parent
         }
 
         Rectangle {
-            id:                         _spacer1
-            anchors.horizontalCenter:   parent.horizontalCenter
-            height:                     1
-            width:                      parent.width * 0.9
-            color:                      qgcPal.text
+            anchors.fill:   _valuesWidget
+            color:          qgcPal.window
         }
 
-        Item {
-            width:  parent.width
-            height: _valuesWidget.height
-
-            Rectangle {
-                anchors.fill:   _valuesWidget
-                color:          _backgroundColor
-                radius:         _spacing
-                visible:        !_showLargeCompass
-            }
-
-            InstrumentSwipeView {
-                id:                 _valuesWidget
-                anchors.margins:    1
-                anchors.left:       parent.left
-                anchors.right:      parent.right
-                qgcView:            instrumentPanel._qgcView
-                textColor:          qgcPal.text
-                backgroundColor:    _backgroundColor
-                maxHeight:          _availableValueHeight
-            }
-        }
-
-        Rectangle {
-            id:                         _spacer2
-            anchors.horizontalCenter:   parent.horizontalCenter
-            height:                     1
-            width:                      parent.width * 0.9
-            color:                      qgcPal.text
-            visible:                    _showLargeCompass
-        }
-
-        QGCCompassWidget {
-            id:                         compass
-            anchors.horizontalCenter:   parent.horizontalCenter
-            size:                       parent.width * 0.95
-            vehicle:                    _activeVehicle
-            visible:                    _showLargeCompass
+        PageView {
+            id:                 _valuesWidget
+            anchors.margins:    1
+            anchors.left:       parent.left
+            anchors.right:      parent.right
+            maxHeight:          _availableValueHeight
         }
     }
 }

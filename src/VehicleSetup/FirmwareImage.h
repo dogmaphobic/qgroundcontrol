@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -56,6 +56,9 @@ public:
     /// @return true: block retrieved
     bool ihxGetBlock(uint16_t index, uint16_t& address, QByteArray& bytes) const;
     
+    /// @return true: actual boardId is compatible with firmware boardId
+    bool isCompatible(uint32_t boardId, uint32_t firmwareId);
+
 signals:
     void errorMessage(const QString& errorString);
     void statusMessage(const QString& warningtring);

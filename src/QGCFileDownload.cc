@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -95,7 +95,8 @@ void QGCFileDownload::_downloadFinished(void)
     
     // When an error occurs or the user cancels the download, we still end up here. So bail out in
     // those cases.
-    if (reply->error() != QNetworkReply::NoError) {
+    if (reply->error() != QNetworkReply::NoError) {        
+        reply->deleteLater();
         return;
     }
 
@@ -115,7 +116,7 @@ void QGCFileDownload::_downloadFinished(void)
         // Store downloaded file in download location
         QFile file(downloadFilename);
         if (!file.open(QIODevice::WriteOnly)) {
-            emit error(QString("Could not save downloaded file to %1. Error: %2").arg(downloadFilename).arg(file.errorString()));
+            emit error(tr("Could not save downloaded file to %1. Error: %2").arg(downloadFilename).arg(file.errorString()));
             return;
         }
 
@@ -128,6 +129,8 @@ void QGCFileDownload::_downloadFinished(void)
         qWarning() << errorMsg;
         emit error(errorMsg);
     }
+
+    reply->deleteLater();
 }
 
 /// @brief Called when an error occurs during download
@@ -136,13 +139,13 @@ void QGCFileDownload::_downloadError(QNetworkReply::NetworkError code)
     QString errorMsg;
     
     if (code == QNetworkReply::OperationCanceledError) {
-        errorMsg = "Download cancelled";
+        errorMsg = tr("Download cancelled");
 
     } else if (code == QNetworkReply::ContentNotFoundError) {
-        errorMsg = "Error: File Not Found";
+        errorMsg = tr("Error: File Not Found");
 
     } else {
-        errorMsg = QString("Error during download. Error: %1").arg(code);
+        errorMsg = tr("Error during download. Error: %1").arg(code);
     }
 
     emit error(errorMsg);

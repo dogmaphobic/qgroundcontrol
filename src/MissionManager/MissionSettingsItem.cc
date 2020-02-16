@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -21,25 +21,20 @@
 
 QGC_LOGGING_CATEGORY(MissionSettingsComplexItemLog, "MissionSettingsComplexItemLog")
 
-const char* MissionSettingsItem::jsonComplexItemTypeValue = "MissionSettings";
-
 const char* MissionSettingsItem::_plannedHomePositionAltitudeName = "PlannedHomePositionAltitude";
 
 QMap<QString, FactMetaData*> MissionSettingsItem::_metaDataMap;
 
-MissionSettingsItem::MissionSettingsItem(Vehicle* vehicle, QObject* parent)
-    : ComplexMissionItem                (vehicle, parent)
+MissionSettingsItem::MissionSettingsItem(Vehicle* vehicle, bool flyView, QObject* parent)
+    : ComplexMissionItem                (vehicle, flyView, parent)
     , _plannedHomePositionAltitudeFact  (0, _plannedHomePositionAltitudeName,   FactMetaData::valueTypeDouble)
-    , _missionEndRTL                    (false)
     , _cameraSection                    (vehicle)
     , _speedSection                     (vehicle)
-    , _sequenceNumber                   (0)
-    , _dirty                            (false)
 {
     _editorQml = "qrc:/qml/MissionSettingsEditor.qml";
 
     if (_metaDataMap.isEmpty()) {
-        _metaDataMap = FactMetaData::createMapFromJsonFile(QStringLiteral(":/json/MissionSettings.FactMetaData.json"), NULL /* metaDataParent */);
+        _metaDataMap = FactMetaData::createMapFromJsonFile(QStringLiteral(":/json/MissionSettings.FactMetaData.json"), nullptr /* metaDataParent */);
     }
 
     _plannedHomePositionAltitudeFact.setMetaData    (_metaDataMap[_plannedHomePositionAltitudeName]);
@@ -50,21 +45,19 @@ MissionSettingsItem::MissionSettingsItem(Vehicle* vehicle, QObject* parent)
     _speedSection.setAvailable(true);
 
     connect(this,               &MissionSettingsItem::specifyMissionFlightSpeedChanged, this, &MissionSettingsItem::_setDirtyAndUpdateLastSequenceNumber);
-    connect(this,               &MissionSettingsItem::missionEndRTLChanged,             this, &MissionSettingsItem::_setDirtyAndUpdateLastSequenceNumber);
     connect(&_cameraSection,    &CameraSection::itemCountChanged,                       this, &MissionSettingsItem::_setDirtyAndUpdateLastSequenceNumber);
     connect(&_speedSection,     &CameraSection::itemCountChanged,                       this, &MissionSettingsItem::_setDirtyAndUpdateLastSequenceNumber);
+    connect(this,               &MissionSettingsItem::terrainAltitudeChanged,           this, &MissionSettingsItem::_setHomeAltFromTerrain);
+    connect(&_cameraSection,    &CameraSection::dirtyChanged,                           this, &MissionSettingsItem::_sectionDirtyChanged);
+    connect(&_speedSection,     &SpeedSection::dirtyChanged,                            this, &MissionSettingsItem::_sectionDirtyChanged);
+    connect(&_cameraSection,    &CameraSection::specifiedGimbalYawChanged,              this, &MissionSettingsItem::specifiedGimbalYawChanged);
+    connect(&_cameraSection,    &CameraSection::specifiedGimbalPitchChanged,            this, &MissionSettingsItem::specifiedGimbalPitchChanged);
+    connect(&_speedSection,     &SpeedSection::specifiedFlightSpeedChanged,             this, &MissionSettingsItem::specifiedFlightSpeedChanged);
+    connect(_vehicle,           &Vehicle::homePositionChanged,                          this, &MissionSettingsItem::_updateHomePosition);
+    connect(&_plannedHomePositionAltitudeFact,  &Fact::rawValueChanged,                 this, &MissionSettingsItem::_updateAltitudeInCoordinate);
 
-    connect(&_plannedHomePositionAltitudeFact,  &Fact::valueChanged,                        this, &MissionSettingsItem::_setDirty);
-
-    connect(&_plannedHomePositionAltitudeFact,  &Fact::valueChanged, this, &MissionSettingsItem::_updateAltitudeInCoordinate);
-
-    connect(&_cameraSection,    &CameraSection::dirtyChanged,   this, &MissionSettingsItem::_sectionDirtyChanged);
-    connect(&_speedSection,     &SpeedSection::dirtyChanged,    this, &MissionSettingsItem::_sectionDirtyChanged);
-
-    connect(&_cameraSection,    &CameraSection::specifyGimbalChanged,       this, &MissionSettingsItem::specifiedGimbalYawChanged);
-    connect(&_cameraSection,    &CameraSection::specifiedGimbalYawChanged,  this, &MissionSettingsItem::specifiedGimbalYawChanged);
+    _updateHomePosition(_vehicle->homePosition());
 }
-
 
 int MissionSettingsItem::lastSequenceNumber(void) const
 {
@@ -94,7 +87,7 @@ void MissionSettingsItem::save(QJsonArray&  missionItems)
 
     appendMissionItems(items, this);
 
-    // First item show be planned home position, we are not responsible for save/load
+    // First item should be planned home position, we are not responsible for save/load
     // Remaining items we just output as is
     for (int i=1; i<items.count(); i++) {
         MissionItem* item = items[i];
@@ -160,26 +153,9 @@ void MissionSettingsItem::appendMissionItems(QList<MissionItem*>& items, QObject
     _speedSection.appendSectionItems(items, missionItemParent, seqNum);
 }
 
-bool MissionSettingsItem::addMissionEndAction(QList<MissionItem*>& items, int seqNum, QObject* missionItemParent)
+bool MissionSettingsItem::addMissionEndAction(QList<MissionItem*>& /*items*/, int /*seqNum*/, QObject* /*missionItemParent*/)
 {
-    MissionItem* item = NULL;
-
-    // IMPORTANT NOTE: If anything changes here you must also change MissionSettingsItem::scanForMissionSettings
-
-    if (_missionEndRTL) {
-        qCDebug(MissionSettingsComplexItemLog) << "Appending end action RTL seqNum" << seqNum;
-        item = new MissionItem(seqNum,
-                               MAV_CMD_NAV_RETURN_TO_LAUNCH,
-                               MAV_FRAME_MISSION,
-                               0, 0, 0, 0, 0, 0, 0,        // param 1-7 not used
-                               true,                       // autoContinue
-                               false,                      // isCurrentItem
-                               missionItemParent);
-        items.append(item);
-        return true;
-    } else {
-        return false;
-    }
+    return false;
 }
 
 bool MissionSettingsItem::scanForMissionSettings(QmlObjectListModel* visualItems, int scanIndex)
@@ -192,21 +168,6 @@ bool MissionSettingsItem::scanForMissionSettings(QmlObjectListModel* visualItems
     // Scan through the initial mission items for possible mission settings
     foundCameraSection = _cameraSection.scanForSection(visualItems, scanIndex);
     foundSpeedSection = _speedSection.scanForSection(visualItems, scanIndex);
-
-    // Look at the end of the mission for end actions
-
-    int lastIndex = visualItems->count() - 1;
-    SimpleMissionItem* item = visualItems->value<SimpleMissionItem*>(lastIndex);
-    if (item) {
-        MissionItem& missionItem = item->missionItem();
-
-        if (missionItem.command() == MAV_CMD_NAV_RETURN_TO_LAUNCH &&
-                missionItem.param1() == 0 && missionItem.param2() == 0 && missionItem.param3() == 0 && missionItem.param4() == 0 && missionItem.param5() == 0 && missionItem.param6() == 0 && missionItem.param7() == 0) {
-            qCDebug(MissionSettingsComplexItemLog) << "Scan: Found end action RTL";
-            _missionEndRTL = true;
-            visualItems->removeAt(lastIndex)->deleteLater();
-        }
-    }
 
     return foundSpeedSection || foundCameraSection;
 }
@@ -221,17 +182,51 @@ void MissionSettingsItem::_setDirty(void)
     setDirty(true);
 }
 
-void MissionSettingsItem::setCoordinate(const QGeoCoordinate& coordinate)
+void MissionSettingsItem::_setCoordinateWorker(const QGeoCoordinate& coordinate)
 {
     if (_plannedHomePositionCoordinate != coordinate) {
-        // ArduPilot tends to send crap home positions at initial vehicel boot, discard them
+        _plannedHomePositionCoordinate = coordinate;
+        emit coordinateChanged(coordinate);
+        emit exitCoordinateChanged(coordinate);
+        _plannedHomePositionAltitudeFact.setRawValue(coordinate.altitude());
+    }
+}
+
+void MissionSettingsItem::setHomePositionFromVehicle(Vehicle* vehicle)
+{
+    // If the user hasn't moved the planned home position manually we use the value from the vehicle
+    if (!_plannedHomePositionMovedByUser) {
+        QGeoCoordinate coordinate = vehicle->homePosition();
+        // ArduPilot tends to send crap home positions at initial vehicle boot, discard them
         if (coordinate.isValid() && (coordinate.latitude() != 0 || coordinate.longitude() != 0)) {
-            qDebug() << "Setting home position" << coordinate;
-            _plannedHomePositionCoordinate = coordinate;
-            emit coordinateChanged(coordinate);
-            emit exitCoordinateChanged(coordinate);
-            _plannedHomePositionAltitudeFact.setRawValue(coordinate.altitude());
+            _plannedHomePositionFromVehicle = true;
+            _setCoordinateWorker(coordinate);
         }
+    }
+}
+
+void MissionSettingsItem::setInitialHomePosition(const QGeoCoordinate& coordinate)
+{
+    _plannedHomePositionMovedByUser = false;
+    _plannedHomePositionFromVehicle = false;
+    _setCoordinateWorker(coordinate);
+}
+
+void MissionSettingsItem::setInitialHomePositionFromUser(const QGeoCoordinate& coordinate)
+{
+    _plannedHomePositionMovedByUser = true;
+    _plannedHomePositionFromVehicle = false;
+    _setCoordinateWorker(coordinate);
+}
+
+
+void MissionSettingsItem::setCoordinate(const QGeoCoordinate& coordinate)
+{
+    if (coordinate != this->coordinate()) {
+        // The user is moving the planned home position manually. Stop tracking vehicle home position.
+        _plannedHomePositionMovedByUser = true;
+        _plannedHomePositionFromVehicle = false;
+        _setCoordinateWorker(coordinate);
     }
 }
 
@@ -253,12 +248,16 @@ double MissionSettingsItem::specifiedGimbalYaw(void)
     return _cameraSection.specifyGimbal() ? _cameraSection.gimbalYaw()->rawValue().toDouble() : std::numeric_limits<double>::quiet_NaN();
 }
 
+double MissionSettingsItem::specifiedGimbalPitch(void)
+{
+    return _cameraSection.specifyGimbal() ? _cameraSection.gimbalPitch()->rawValue().toDouble() : std::numeric_limits<double>::quiet_NaN();
+}
+
 void MissionSettingsItem::_updateAltitudeInCoordinate(QVariant value)
 {
     double newAltitude = value.toDouble();
 
     if (!qFuzzyCompare(_plannedHomePositionCoordinate.altitude(), newAltitude)) {
-
         _plannedHomePositionCoordinate.setAltitude(newAltitude);
         emit coordinateChanged(_plannedHomePositionCoordinate);
         emit exitCoordinateChanged(_plannedHomePositionCoordinate);
@@ -274,10 +273,21 @@ double MissionSettingsItem::specifiedFlightSpeed(void)
     }
 }
 
-void MissionSettingsItem::setMissionEndRTL(bool missionEndRTL)
+void MissionSettingsItem::_setHomeAltFromTerrain(double terrainAltitude)
 {
-    if (missionEndRTL != _missionEndRTL) {
-        _missionEndRTL = missionEndRTL;
-        emit missionEndRTLChanged(missionEndRTL);
+    if (!_plannedHomePositionFromVehicle && !qIsNaN(terrainAltitude)) {
+        _plannedHomePositionAltitudeFact.setRawValue(terrainAltitude);
+    }
+}
+
+QString MissionSettingsItem::abbreviation(void) const
+{
+    return _flyView ? tr("L") : tr("Launch");
+}
+
+void MissionSettingsItem::_updateHomePosition(const QGeoCoordinate& homePosition)
+{
+    if (_flyView) {
+        setCoordinate(homePosition);
     }
 }

@@ -10,17 +10,50 @@
             "paramRemove":  "2"
         },
         {
+            "id":                   17,
+            "comment":              "MAV_CMD_NAV_LOITER_UNLIM",
+            "param4": {
+                "label":            "Heading",
+                "units":            "radians",
+                "default":          0,
+                "decimalPlaces":    2
+            }
+        },
+        {
+            "id":                   18,
+            "comment":              "MAV_CMD_NAV_LOITER_TURNS",
+            "param4": {
+                "label":            "Heading",
+                "units":            "radians",
+                "default":          0,
+                "decimalPlaces":    2
+            }
+        },
+        {
+            "id":                   19,
+            "comment":              "MAV_CMD_NAV_LOITER_TIME",
+            "param4": {
+                "label":            "Heading",
+                "units":            "radians",
+                "default":          0,
+                "decimalPlaces":    2
+            }
+        },
+        {
             "id":                       22,
             "comment":                  "MAV_CMD_NAV_TAKEOFF",
+            "description":              "Take off from the ground and ascend to specified altitude.",
             "specifiesCoordinate":      false,
             "specifiesAltitudeOnly":    true
         },
         {
-            "id":                   84,
-            "comment":              "MAV_CMD_NAV_VTOL_TAKEOFF",
-            "specifiesCoordinate":  true,
-            "friendlyEdit":         true,
-            "category":             "VTOL"
+            "id":                       84,
+            "comment":                  "MAV_CMD_NAV_VTOL_TAKEOFF",
+            "description":              "Takeoff to specified altitude.",
+            "specifiesCoordinate":      false,
+            "specifiesAltitudeOnly":    true,
+            "friendlyEdit":             true,
+            "category":                 "VTOL"
         },
         {
             "id":                   85,
@@ -51,9 +84,9 @@
             }
         },
         {
-            "id":                   201,
-            "comment":              "MAV_CMD_DO_SET_ROI",
-            "paramRemove":          "2,3"
+            "id":           201,
+            "comment":      "MAV_CMD_DO_SET_ROI",
+            "paramRemove":  "1,2,3"
         },
         {
             "id":           205,

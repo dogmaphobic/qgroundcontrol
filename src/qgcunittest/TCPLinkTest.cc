@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -17,8 +17,8 @@
 #include "TCPLoopBackServer.h"
 
 TCPLinkTest::TCPLinkTest(void)
-    : _link(NULL)
-    , _multiSpy(NULL)
+    : _link(nullptr)
+    , _multiSpy(nullptr)
 {
 
 }
@@ -130,7 +130,7 @@ void TCPLinkTest::_connectSucceed_test(void)
     
     // We emit this signal such that it will be queued and run on the TCPLink thread. This in turn
     // allows the TCPLink object to pump the bytes through.
-    connect(this, SIGNAL(waitForBytesWritten(int)), _link, SLOT(waitForBytesWritten(int)));
+    connect(this, &TCPLinkTest::waitForBytesWritten, _link, &TCPLink::waitForBytesWritten);
     emit waitForBytesWritten(1000);
 
     // Check for loopback, both from signal received and actual bytes returned

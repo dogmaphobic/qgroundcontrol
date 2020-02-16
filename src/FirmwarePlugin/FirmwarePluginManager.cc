@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -16,7 +16,7 @@
 
 FirmwarePluginManager::FirmwarePluginManager(QGCApplication* app, QGCToolbox* toolbox)
     : QGCTool(app, toolbox)
-    , _genericFirmwarePlugin(NULL)
+    , _genericFirmwarePlugin(nullptr)
 {
 
 }
@@ -58,7 +58,7 @@ QList<MAV_TYPE> FirmwarePluginManager::supportedVehicleTypes(MAV_AUTOPILOT firmw
 FirmwarePlugin* FirmwarePluginManager::firmwarePluginForAutopilot(MAV_AUTOPILOT firmwareType, MAV_TYPE vehicleType)
 {
     FirmwarePluginFactory*  factory = _findPluginFactory(firmwareType);
-    FirmwarePlugin*         plugin = NULL;
+    FirmwarePlugin*         plugin = nullptr;
 
     if (factory) {
         plugin = factory->firmwarePluginForAutopilot(firmwareType, vehicleType);
@@ -89,5 +89,5 @@ FirmwarePluginFactory* FirmwarePluginManager::_findPluginFactory(MAV_AUTOPILOT f
         }
     }
 
-    return NULL;
+    return nullptr;
 }

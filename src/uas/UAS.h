@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,8 +11,7 @@
 // UASInterface, UAS.h/cc are deprecated. All new functionality should go into Vehicle.h/cc
 //
 
-#ifndef _UAS_H_
-#define _UAS_H_
+#pragma once
 
 #include "UASInterface.h"
 #include <MAVLinkProtocol.h>
@@ -24,7 +23,6 @@
 #ifndef __mobile__
 #include "FileManager.h"
 #include "QGCHilLink.h"
-#include "QGCFlightGearLink.h"
 #include "QGCJSBSimLink.h"
 #include "QGCXPlaneLink.h"
 #endif
@@ -54,51 +52,12 @@ public:
 
     /** @brief Get the unique system id */
     int getUASID() const;
-    /** @brief Get the components */
-    QMap<int, QString> getComponents();
 
     /** @brief The time interval the robot is switched on */
     quint64 getUptime() const;
 
-    Q_PROPERTY(double   roll                    READ getRoll                WRITE setRoll               NOTIFY rollChanged)
-    Q_PROPERTY(double   pitch                   READ getPitch               WRITE setPitch              NOTIFY pitchChanged)
-    Q_PROPERTY(double   yaw                     READ getYaw                 WRITE setYaw                NOTIFY yawChanged)
-
     /// Vehicle is about to go away
     void shutdownVehicle(void);
-
-    void setRoll(double val)
-    {
-        roll = val;
-        emit rollChanged(val,"roll");
-    }
-
-    double getRoll() const
-    {
-        return roll;
-    }
-
-    void setPitch(double val)
-    {
-        pitch = val;
-        emit pitchChanged(val,"pitch");
-    }
-
-    double getPitch() const
-    {
-        return pitch;
-    }
-
-    void setYaw(double val)
-    {
-        yaw = val;
-        emit yawChanged(val,"yaw");
-    }
-
-    double getYaw() const
-    {
-        return yaw;
-    }
 
     // Setters for HIL noise variance
     void setXaccVar(float var){
@@ -157,10 +116,9 @@ public:
     friend class FileManager;
 #endif
 
-protected: //COMMENTS FOR TEST UNIT
+protected:
     /// LINK ID AND STATUS
     int uasId;                    ///< Unique system ID
-    QMap<int, QString> components;///< IDs and names of all detected onboard components
 
     QList<int> unknownPackets;    ///< Packet IDs which are unknown and have been received
     MAVLinkProtocol* mavlink;     ///< Reference to the MAVLink instance
@@ -180,11 +138,6 @@ protected: //COMMENTS FOR TEST UNIT
     bool controlYawManual;      ///< status flag, true if yaw is controlled manually
     bool controlThrustManual;   ///< status flag, true if thrust is controlled manually
 
-    double manualRollAngle;     ///< Roll angle set by human pilot (radians)
-    double manualPitchAngle;    ///< Pitch angle set by human pilot (radians)
-    double manualYawAngle;      ///< Yaw angle set by human pilot (radians)
-    double manualThrust;        ///< Thrust set by human pilot (radians)
-
     /// POSITION
     bool isGlobalPositionKnown; ///< If the global position has been received for this MAV
 
@@ -196,9 +149,6 @@ protected: //COMMENTS FOR TEST UNIT
     bool attitudeKnown;             ///< True if attitude was received, false else
     bool attitudeStamped;           ///< Should arriving data be timestamped with the last attitude? This helps with broken system time clocks on the MAV
     quint64 lastAttitude;           ///< Timestamp of last attitude measurement
-    double roll;
-    double pitch;
-    double yaw;
 
     // dongfang: This looks like a candidate for being moved off to a separate class.
     /// IMAGING
@@ -260,7 +210,6 @@ public slots:
 
     /** @brief Enable / disable HIL */
 #ifndef __mobile__
-    void enableHilFlightGear(bool enable, QString options, bool sensorHil, QObject * configuration);
     void enableHilJSBSim(bool enable, QString options);
     void enableHilXPlane(bool enable);
 
@@ -363,12 +312,8 @@ protected:
     quint64 lastSendTimeOpticalFlow; ///< Last HIL Optical Flow message sent
 
 private:
-    void _say(const QString& text, int severity = 6);
-
-private:
     Vehicle*                _vehicle;
     FirmwarePluginManager*  _firmwarePluginManager;
 };
 
 
-#endif // _UAS_H_

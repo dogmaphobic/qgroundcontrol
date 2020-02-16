@@ -11,9 +11,9 @@ Rectangle {
     color:                 parent.indicatorColor
     visible:               showIndicator
 
-    property bool showIndicator: (parent.flickableDirection == Flickable.AutoFlickDirection ||
-                                  parent.flickableDirection == Flickable.HorizontalFlick ||
-                                  parent.flickableDirection == Flickable.HorizontalAndVerticalFlick) &&
+    property bool showIndicator: (parent.flickableDirection === Flickable.AutoFlickDirection ||
+                                  parent.flickableDirection === Flickable.HorizontalFlick ||
+                                  parent.flickableDirection === Flickable.HorizontalAndVerticalFlick) &&
                                  (parent.contentWidth > parent.width)
 
     Component.onCompleted:  animateOpacity.restart()
@@ -33,7 +33,7 @@ Rectangle {
         properties:    "opacity"
         from:          1.0
         to:            0.0
-        duration:      3000
+        duration:      2000
         easing.type:   Easing.InQuint
     }
 }

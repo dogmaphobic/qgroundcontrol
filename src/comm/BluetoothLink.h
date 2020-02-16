@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -11,12 +11,11 @@
 /*!
  * @file
  *   @brief Bluetooth connection for unmanned vehicles
- *   @author Gus Grubba <mavlink@grubba.com>
+ *   @author Gus Grubba <gus@auterion.com>
  *
  */
 
-#ifndef BTLINK_H
-#define BTLINK_H
+#pragma once
 
 #include <QString>
 #include <QList>
@@ -92,7 +91,7 @@ public:
     QString     devName                 () { return _device.name; }
     QString     address                 ();
     QStringList nameList                () { return _nameList; }
-    bool        scanning                () { return _deviceDiscover != NULL; }
+    bool        scanning                () { return _deviceDiscover != nullptr; }
 
     BluetoothData    device             () { return _device; }
 
@@ -105,6 +104,7 @@ public:
     void        saveSettings            (QSettings& settings, const QString& root);
     void        updateSettings          ();
     QString     settingsURL             () { return "BluetoothSettings.qml"; }
+    QString     settingsTitle           ();
 
 public slots:
     void        deviceDiscovered        (QBluetoothDeviceInfo info);
@@ -194,4 +194,3 @@ private:
 
 };
 
-#endif // BTLINK_H

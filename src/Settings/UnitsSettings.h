@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -17,7 +17,7 @@ class UnitsSettings : public SettingsGroup
     Q_OBJECT
     
 public:
-    UnitsSettings(QObject* parent = NULL);
+    UnitsSettings(QObject* parent = nullptr);
 
     enum DistanceUnits {
         DistanceUnitsFeet = 0,
@@ -41,28 +41,22 @@ public:
         SpeedUnitsKnots,
     };
 
-    Q_ENUMS(DistanceUnits)
-    Q_ENUMS(AreaUnits)
-    Q_ENUMS(SpeedUnits)
+    enum TemperatureUnits {
+        TemperatureUnitsCelsius = 0,
+        TemperatureUnitsFarenheit,
+    };
 
-    Q_PROPERTY(Fact* distanceUnits                      READ distanceUnits                      CONSTANT)
-    Q_PROPERTY(Fact* areaUnits                          READ areaUnits                          CONSTANT)
-    Q_PROPERTY(Fact* speedUnits                         READ speedUnits                         CONSTANT)
+    Q_ENUM(DistanceUnits)
+    Q_ENUM(AreaUnits)
+    Q_ENUM(SpeedUnits)
+    Q_ENUM(TemperatureUnits)
 
-    Fact* distanceUnits                     (void);
-    Fact* areaUnits                         (void);
-    Fact* speedUnits                        (void);
+    DEFINE_SETTING_NAME_GROUP()
 
-    static const char* unitsSettingsGroupName;
-
-    static const char* distanceUnitsSettingsName;
-    static const char* areaUnitsSettingsName;
-    static const char* speedUnitsSettingsName;
-
-private:
-    SettingsFact* _distanceUnitsFact;
-    SettingsFact* _areaUnitsFact;
-    SettingsFact* _speedUnitsFact;
+    DEFINE_SETTINGFACT(distanceUnits)
+    DEFINE_SETTINGFACT(areaUnits)
+    DEFINE_SETTINGFACT(speedUnits)
+    DEFINE_SETTINGFACT(temperatureUnits)
 };
 
 #endif

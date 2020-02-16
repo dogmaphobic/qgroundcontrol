@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -29,15 +29,15 @@
 #include "QGC.h"
 #include "UAS.h"
 #include "UASInterface.h"
-#include "QGCMessageBox.h"
+//-- TODO: #include "QGCMessageBox.h"
 
 QGCXPlaneLink::QGCXPlaneLink(Vehicle* vehicle, QString remoteHost, QHostAddress localHost, quint16 localPort) :
     _vehicle(vehicle),
     remoteHost(QHostAddress("127.0.0.1")),
     remotePort(49000),
-    socket(NULL),
-    process(NULL),
-    terraSync(NULL),
+    socket(nullptr),
+    process(nullptr),
+    terraSync(nullptr),
     barometerOffsetkPa(-8.0f),
     airframeID(QGCXPlaneLink::AIRFRAME_UNKNOWN),
     xPlaneConnected(false),
@@ -75,7 +75,7 @@ QGCXPlaneLink::~QGCXPlaneLink()
     if (socket) {
         socket->close();
         socket->deleteLater();
-        socket = NULL;
+        socket = nullptr;
     }
 }
 
@@ -180,7 +180,7 @@ void QGCXPlaneLink::run()
         emit statusMessage("Binding socket failed!");
 
         socket->deleteLater();
-        socket = NULL;
+        socket = nullptr;
         return;
     }
 
@@ -260,7 +260,7 @@ void QGCXPlaneLink::run()
 
     socket->close();
     socket->deleteLater();
-    socket = NULL;
+    socket = nullptr;
 
     emit simulationDisconnected();
     emit simulationConnected(false);
@@ -302,7 +302,7 @@ void QGCXPlaneLink::processError(QProcess::ProcessError err)
     }
     
     
-    QGCMessageBox::critical(tr("X-Plane HIL"), msg);
+    //-- TODO: QGCMessageBox::critical(tr("X-Plane HIL"), msg);
 }
 
 QString QGCXPlaneLink::getRemoteHost()
@@ -532,6 +532,10 @@ void QGCXPlaneLink::updateActuatorControls(quint64 time, quint64 flags, float ct
             p.f[6] = ctl_3;
             p.f[7] = ctl_3;
             writeBytesSafe((const char*)&p, sizeof(p));
+
+            /* Send flap signals, assuming that they are mapped to channel 5 (ctl_4) */
+            sendDataRef("sim/flightmodel/controls/flaprqst", ctl_4);
+            sendDataRef("sim/flightmodel/controls/flap2rqst", ctl_4);
             break;
         }
 
@@ -1064,7 +1068,7 @@ void QGCXPlaneLink::setRandomPosition()
                         _vehicle->altitudeAMSL()->rawValue().toDouble() + offAlt,
                         _vehicle->roll()->rawValue().toDouble(),
                         _vehicle->pitch()->rawValue().toDouble(),
-                        _vehicle->uas()->getYaw());
+                        _vehicle->heading()->rawValue().toDouble());
 }
 
 void QGCXPlaneLink::setRandomAttitude()

@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -23,8 +23,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QTime>
-
-#include "qextserialport.h"
+#include <QSerialPort>
 
 #include <stdint.h>
 
@@ -72,7 +71,7 @@ private:
     PX4FirmwareUpgradeThreadController* _controller;
     
     Bootloader*      _bootloader;
-    QextSerialPort*     _bootloaderPort;
+    QSerialPort*     _bootloaderPort;
     QTimer*             _timerRetry;
     QTime               _elapsed;
     static const int    _retryTimeout = 100;
@@ -89,7 +88,7 @@ class PX4FirmwareUpgradeThreadController : public QObject
     Q_OBJECT
     
 public:
-    PX4FirmwareUpgradeThreadController(QObject* parent = NULL);
+    PX4FirmwareUpgradeThreadController(QObject* parent = nullptr);
     ~PX4FirmwareUpgradeThreadController(void);
     
     /// @brief Begins the process of searching for a supported board connected to any serial port. This will

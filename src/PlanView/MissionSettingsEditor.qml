@@ -15,7 +15,7 @@ import QGroundControl.Controllers       1.0
 Rectangle {
     id:                 valuesRect
     width:              availableWidth
-    height:             deferedload.status == Loader.Ready ? (visible ? deferedload.item.height : 0) : 0
+    height:             valuesColumn.height + (_margin * 2)
     color:              qgcPal.windowShadeDark
     visible:            missionItem.isCurrentItem
     radius:             _radius
@@ -25,104 +25,76 @@ Rectangle {
     property var    _missionVehicle:                _masterControler.controllerVehicle
     property bool   _vehicleHasHomePosition:        _missionVehicle.homePosition.isValid
     property bool   _offlineEditing:                _missionVehicle.isOfflineEditingVehicle
-    property bool   _showOfflineVehicleCombos:      _multipleFirmware
     property bool   _enableOfflineVehicleCombos:    _offlineEditing && _noMissionItemsAdded
     property bool   _showCruiseSpeed:               !_missionVehicle.multiRotor
     property bool   _showHoverSpeed:                _missionVehicle.multiRotor || _missionVehicle.vtol
     property bool   _multipleFirmware:              QGroundControl.supportedFirmwareCount > 2
+    property bool   _multipleVehicleTypes:          QGroundControl.supportedVehicleCount > 1
     property real   _fieldWidth:                    ScreenTools.defaultFontPixelWidth * 16
     property bool   _mobile:                        ScreenTools.isMobile
     property var    _savePath:                      QGroundControl.settingsManager.appSettings.missionSavePath
     property var    _fileExtension:                 QGroundControl.settingsManager.appSettings.missionFileExtension
     property var    _appSettings:                   QGroundControl.settingsManager.appSettings
     property bool   _waypointsOnlyMode:             QGroundControl.corePlugin.options.missionWaypointsOnly
+    property bool   _showCameraSection:             (_waypointsOnlyMode || QGroundControl.corePlugin.showAdvancedUI) && !_missionVehicle.apmFirmware
+    property bool   _simpleMissionStart:            QGroundControl.corePlugin.options.showSimpleMissionStart
+    property bool   _showFlightSpeed:               !_missionVehicle.vtol && !_simpleMissionStart && !_missionVehicle.apmFirmware
 
     readonly property string _firmwareLabel:    qsTr("Firmware")
     readonly property string _vehicleLabel:     qsTr("Vehicle")
+    readonly property real  _margin:            ScreenTools.defaultFontPixelWidth / 2
 
     QGCPalette { id: qgcPal }
     QGCFileDialogController { id: fileController }
 
-    Loader {
-        id:              deferedload
-        active:          valuesRect.visible
-        asynchronous:    true
-        anchors.margins: _margin
-        anchors.left:    valuesRect.left
-        anchors.right:   valuesRect.right
-        anchors.top:     valuesRect.top
+    Column {
+        id:                 valuesColumn
+        anchors.margins:    _margin
+        anchors.left:       parent.left
+        anchors.right:      parent.right
+        anchors.top:        parent.top
+        spacing:            _margin
 
-        sourceComponent: Component {
-            Item {
-                id:                 valuesItem
-                height:             valuesColumn.height + (_margin * 2)
+        GridLayout {
+            anchors.left:   parent.left
+            anchors.right:  parent.right
+            columnSpacing:  ScreenTools.defaultFontPixelWidth
+            rowSpacing:     columnSpacing
+            columns:        2
 
-                Column {
-                    id:             valuesColumn
-                    anchors.left:   parent.left
-                    anchors.right:  parent.right
-                    anchors.top:    parent.top
-                    spacing:        _margin
+            QGCLabel {
+                text:       qsTr("Waypoint alt")
+            }
+            FactTextField {
+                fact:               QGroundControl.settingsManager.appSettings.defaultMissionItemAltitude
+                Layout.fillWidth:   true
+            }
 
-                    Loader {
-                        anchors.left:       parent.left
-                        anchors.right:      parent.right
-                        sourceComponent:    missionSettings
-                    }
-                } // Column
-            } // Item
-        } // Component
-    } // Loader
-
-    Component {
-        id: missionSettings
+            QGCCheckBox {
+                id:         flightSpeedCheckBox
+                text:       qsTr("Flight speed")
+                visible:    _showFlightSpeed
+                checked:    missionItem.speedSection.specifyFlightSpeed
+                onClicked:   missionItem.speedSection.specifyFlightSpeed = checked
+            }
+            FactTextField {
+                Layout.fillWidth:   true
+                fact:               missionItem.speedSection.flightSpeed
+                visible:            _showFlightSpeed
+                enabled:            flightSpeedCheckBox.checked
+            }
+        }
 
         Column {
-            id:             valuesColumn
-            anchors.left:   parent ? parent.left  : undefined
-            anchors.right:  parent ? parent.right : undefined
-            anchors.top:    parent ? parent.top   : undefined
+            anchors.left:   parent.left
+            anchors.right:  parent.right
             spacing:        _margin
-
-            Column {
-                anchors.left:   parent.left
-                anchors.right:  parent.right
-                spacing:        _margin
-
-                GridLayout {
-                    anchors.left:   parent.left
-                    anchors.right:  parent.right
-                    columnSpacing:  ScreenTools.defaultFontPixelWidth
-                    rowSpacing:     columnSpacing
-                    columns:        2
-
-                    QGCLabel {
-                        text:       qsTr("Waypoint alt")
-                    }
-                    FactTextField {
-                        fact:               QGroundControl.settingsManager.appSettings.defaultMissionItemAltitude
-                        Layout.fillWidth:   true
-                    }
-
-                    QGCCheckBox {
-                        id:         flightSpeedCheckBox
-                        text:       qsTr("Flight speed")
-                        visible:    !_missionVehicle.vtol
-                        checked:    missionItem.speedSection.specifyFlightSpeed
-                        onClicked:   missionItem.speedSection.specifyFlightSpeed = checked
-                    }
-                    FactTextField {
-                        Layout.fillWidth:   true
-                        fact:               missionItem.speedSection.flightSpeed
-                        visible:            flightSpeedCheckBox.visible
-                        enabled:            flightSpeedCheckBox.checked
-                    }
-                } // GridLayout
-            }
+            visible:        !_simpleMissionStart
 
             CameraSection {
                 id:         cameraSection
-                checked:    missionItem.cameraSection.settingsSpecified
+                checked:    !_waypointsOnlyMode && missionItem.cameraSection.settingsSpecified
+                visible:    _showCameraSection
             }
 
             QGCLabel {
@@ -132,34 +104,16 @@ Rectangle {
                 wrapMode:               Text.WordWrap
                 horizontalAlignment:    Text.AlignHCenter
                 font.pointSize:         ScreenTools.smallFontPointSize
-                visible:                cameraSection.checked
+                visible:                _showCameraSection && cameraSection.checked
             }
 
             SectionHeader {
-                id:         missionEndHeader
-                text:       qsTr("Mission End")
-                checked:    true
-            }
-
-            Column {
+                id:             vehicleInfoSectionHeader
                 anchors.left:   parent.left
                 anchors.right:  parent.right
-                spacing:        _margin
-                visible:        missionEndHeader.checked
-
-                QGCCheckBox {
-                    text:       qsTr("Return To Launch")
-                    checked:    missionItem.missionEndRTL
-                    onClicked:  missionItem.missionEndRTL = checked
-                }
-            }
-
-
-            SectionHeader {
-                id:         vehicleInfoSectionHeader
-                text:       qsTr("Vehicle Info")
-                visible:    _offlineEditing && !_waypointsOnlyMode
-                checked:    false
+                text:           qsTr("Vehicle Info")
+                visible:        _offlineEditing && !_waypointsOnlyMode
+                checked:        false
             }
 
             GridLayout {
@@ -173,26 +127,26 @@ Rectangle {
                 QGCLabel {
                     text:               _firmwareLabel
                     Layout.fillWidth:   true
-                    visible:            _showOfflineVehicleCombos
+                    visible:            _multipleFirmware
                 }
                 FactComboBox {
                     fact:                   QGroundControl.settingsManager.appSettings.offlineEditingFirmwareType
                     indexModel:             false
                     Layout.preferredWidth:  _fieldWidth
-                    visible:                _showOfflineVehicleCombos
+                    visible:                _multipleFirmware
                     enabled:                _enableOfflineVehicleCombos
                 }
 
                 QGCLabel {
                     text:               _vehicleLabel
                     Layout.fillWidth:   true
-                    visible:            _showOfflineVehicleCombos
+                    visible:            _multipleVehicleTypes
                 }
                 FactComboBox {
                     fact:                   QGroundControl.settingsManager.appSettings.offlineEditingVehicleType
                     indexModel:             false
                     Layout.preferredWidth:  _fieldWidth
-                    visible:                _showOfflineVehicleCombos
+                    visible:                _multipleVehicleTypes
                     enabled:                _enableOfflineVehicleCombos
                 }
 
@@ -220,10 +174,12 @@ Rectangle {
             } // GridLayout
 
             SectionHeader {
-                id:         plannedHomePositionSection
-                text:       qsTr("Planned Home Position")
-                visible:    !_vehicleHasHomePosition
-                checked:    false
+                id:             plannedHomePositionSection
+                anchors.left:   parent.left
+                anchors.right:  parent.right
+                text:           qsTr("Launch Position")
+                visible:        !_vehicleHasHomePosition
+                checked:        false
             }
 
             Column {
@@ -257,11 +213,11 @@ Rectangle {
                 }
 
                 QGCButton {
-                    text:                       qsTr("Set Home To Map Center")
+                    text:                       qsTr("Set To Map Center")
                     onClicked:                  missionItem.coordinate = map.center
                     anchors.horizontalCenter:   parent.horizontalCenter
                 }
             }
         } // Column
-    } // Deferred loader
+    } // Column
 } // Rectangle

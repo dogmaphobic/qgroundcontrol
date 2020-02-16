@@ -1,6 +1,6 @@
 ﻿/****************************************************************************
  *
- *   (c) 2009-2016 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
+ * (c) 2009-2020 QGROUNDCONTROL PROJECT <http://www.qgroundcontrol.org>
  *
  * QGroundControl is licensed according to the terms in the file
  * COPYING.md in the root of the source code directory.
@@ -9,7 +9,8 @@
 
 #pragma once
 
-#include <QtPositioning/qgeopositioninfosource.h>
+#include <QGeoPositionInfoSource>
+#include <QNmeaPositionInfoSource>
 
 #include <QVariant>
 
@@ -24,28 +25,45 @@ public:
     QGCPositionManager(QGCApplication* app, QGCToolbox* toolbox);
     ~QGCPositionManager();
 
+    Q_PROPERTY(QGeoCoordinate gcsPosition  READ gcsPosition  NOTIFY gcsPositionChanged)
+    Q_PROPERTY(qreal          gcsHeading   READ gcsHeading   NOTIFY gcsHeadingChanged)
+
     enum QGCPositionSource {
         Simulated,
-        GPS,
-        Log
+        InternalGPS,
+        Log,
+        NmeaGPS
     };
 
-    void setPositionSource(QGCPositionSource source);
+    QGeoCoordinate      gcsPosition         (void) { return _gcsPosition; }
+    qreal               gcsHeading          (void) { return _gcsHeading; }
+    QGeoPositionInfo    geoPositionInfo     (void) const { return _geoPositionInfo; }
+    void                setPositionSource   (QGCPositionSource source);
+    int                 updateInterval      (void) const;
+    void                setNmeaSourceDevice (QIODevice* device);
 
-    int updateInterval() const;
+    // Overrides from QGCTool
+    void setToolbox(QGCToolbox* toolbox) override;
 
-    void setToolbox(QGCToolbox* toolbox);
 
 private slots:
-    void positionUpdated(const QGeoPositionInfo &update);
+    void _positionUpdated(const QGeoPositionInfo &update);
+    void _error(QGeoPositionInfoSource::Error positioningError);
 
 signals:
-    void lastPositionUpdated(bool valid, QVariant lastPosition);
+    void gcsPositionChanged(QGeoCoordinate gcsPosition);
+    void gcsHeadingChanged(qreal gcsHeading);
     void positionInfoUpdated(QGeoPositionInfo update);
 
 private:
-    int _updateInterval;
-    QGeoPositionInfoSource * _currentSource;
-    QGeoPositionInfoSource * _defaultSource;
-    QGeoPositionInfoSource * _simulatedSource;
+    int                 _updateInterval =   0;
+    QGeoPositionInfo    _geoPositionInfo;
+    QGeoCoordinate      _gcsPosition;
+    qreal               _gcsHeading =       qQNaN();
+
+    QGeoPositionInfoSource*     _currentSource =        nullptr;
+    QGeoPositionInfoSource*     _defaultSource =        nullptr;
+    QNmeaPositionInfoSource*    _nmeaSource =           nullptr;
+    QGeoPositionInfoSource*     _simulatedSource =      nullptr;
+    bool                        _usingPluginSource =    false;
 };
