@@ -24,8 +24,14 @@ public:
 
     Q_INVOKABLE QVariantList list(void) const { return _points; }
 
+    /// Resets any existing trajectory and starts collecting a new one
     void start  (void);
+    /// Stops collecting coordinate changes
     void stop   (void);
+    /// Pause collecting coordinate changes.
+    void pause  ();
+    /// Resumes collecting coordinate changes. If not running, it will start from scratch.
+    void resume ();
 
 public slots:
     void clear  (void);
@@ -43,7 +49,9 @@ private:
     QVariantList    _points;
     QGeoCoordinate  _lastPoint;
     double          _lastAzimuth;
+    bool            _paused  = false;
+    bool            _running = false;
 
     static constexpr double _distanceTolerance = 2.0;
-    static constexpr double _azimuthTolerance = 1.5;
+    static constexpr double _azimuthTolerance  = 1.5;
 };
