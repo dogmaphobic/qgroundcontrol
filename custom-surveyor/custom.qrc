@@ -1,0 +1,39 @@
+<RCC>
+    <qresource prefix="/custom">
+        <file alias="CustomAltitudeIndicator.qml">res/MainToolbar/CustomAltitudeIndicator.qml</file>
+        <file alias="CustomFlyView.qml">res/CustomFlyView.qml</file>
+        <file alias="CustomGPSIndicator.qml">res/MainToolbar/CustomGPSIndicator.qml</file>
+        <file alias="CustomMainToolBar.qml">res/MainToolbar/CustomMainToolBar.qml</file>
+        <file alias="CustomMainToolBarIndicators.qml">res/MainToolbar/CustomMainToolBarIndicators.qml</file>
+    </qresource>
+    <qresource prefix="custom/img">
+        <file alias="LogoBlack">res/Images/LogoBlack.svg</file>
+        <file alias="LogoWhite">res/Images/LogoWhite.svg</file>
+        <file alias="altitude.svg">res/Images/altitude.svg</file>
+        <file alias="attitude_crosshair.svg">res/Images/attitude_crosshair.svg</file>
+        <file alias="attitude_dial.svg">res/Images/attitude_dial.svg</file>
+        <file alias="attitude_pointer.svg">res/Images/attitude_pointer.svg</file>
+        <file alias="compass_needle.svg">res/Images/compass_needle.svg</file>
+        <file alias="compass_pointer.svg">res/Images/compass_pointer.svg</file>
+        <file alias="map-center.svg">res/Images/centercode-brands.svg</file>
+        <file alias="menu_signal_0.svg">res/Images/menu_signal_0.svg</file>
+        <file alias="menu_signal_100.svg">res/Images/menu_signal_100.svg</file>
+        <file alias="menu_signal_25.svg">res/Images/menu_signal_25.svg</file>
+        <file alias="menu_signal_50.svg">res/Images/menu_signal_50.svg</file>
+        <file alias="menu_signal_75.svg">res/Images/menu_signal_75.svg</file>
+        <file alias="void.png">res/Images/void.png</file>
+    </qresource>
+    <qresource prefix="Custom/Widgets">
+        <file alias="Custom/Widgets/CustomArtificialHorizon.qml">res/Custom/Widgets/CustomArtificialHorizon.qml</file>
+        <file alias="Custom/Widgets/CustomAttitudeWidget.qml">res/Custom/Widgets/CustomAttitudeWidget.qml</file>
+        <file alias="Custom/Widgets/CustomIconButton.qml">res/Custom/Widgets/CustomIconButton.qml</file>
+        <file alias="Custom/Widgets/CustomSignalStrength.qml">res/Custom/Widgets/CustomSignalStrength.qml</file>
+        <file alias="Custom/Widgets/CustomToolBarButton.qml">res/Custom/Widgets/CustomToolBarButton.qml</file>
+        <file alias="Custom/Widgets/qmldir">res/Custom/Widgets/qmldir</file>
+    </qresource>
+    <qresource prefix="/custom/wav">
+        <file alias="beep.wav">res/audio/beep.wav</file>
+        <file alias="boop.wav">res/audio/boop.wav</file>
+        <file alias="camera.wav">res/audio/camera.wav</file>
+    </qresource>
+</RCC>
