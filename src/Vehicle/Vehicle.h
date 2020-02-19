@@ -541,7 +541,7 @@ public:
     Q_PROPERTY(QStringList          extraJoystickFlightModes READ extraJoystickFlightModes                              NOTIFY flightModesChanged)
     Q_PROPERTY(QString              flightMode              READ flightMode             WRITE setFlightMode             NOTIFY flightModeChanged)
     Q_PROPERTY(bool                 hilMode                 READ hilMode                WRITE setHilMode                NOTIFY hilModeChanged)
-    Q_PROPERTY(TrajectoryPoints*    trajectoryPoints        MEMBER _trajectoryPoints                                    CONSTANT)
+    Q_PROPERTY(TrajectoryPoints*    trajectoryPoints        READ trajectoryPoints                                       CONSTANT)
     Q_PROPERTY(QmlObjectListModel*  cameraTriggerPoints     READ cameraTriggerPoints                                    CONSTANT)
     Q_PROPERTY(float                latitude                READ latitude                                               NOTIFY coordinateChanged)
     Q_PROPERTY(float                longitude               READ longitude                                              NOTIFY coordinateChanged)
@@ -885,6 +885,7 @@ public:
     void setPrearmError(const QString& prearmError);
 
     QmlObjectListModel* cameraTriggerPoints () { return &_cameraTriggerPoints; }
+    TrajectoryPoints*   trajectoryPoints() { return _trajectoryPoints; }
 
     int  flowImageIndex() { return _flowImageIndex; }
 
