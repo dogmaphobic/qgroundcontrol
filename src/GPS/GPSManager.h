@@ -26,11 +26,13 @@ class GPSManager : public QGCTool
     Q_OBJECT
 public:
     GPSManager(QGCApplication* app, QGCToolbox* toolbox);
-    ~GPSManager();
+    ~GPSManager() override;
 
     void connectGPS     (const QString& device, const QString& gps_type);
     void disconnectGPS  (void);
     bool connected      (void) const { return _gpsProvider && _gpsProvider->isRunning(); }
+
+    void setToolbox     (QGCToolbox* toolbox) override;
 
 signals:
     void onConnect();

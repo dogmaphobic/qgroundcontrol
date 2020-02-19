@@ -70,5 +70,45 @@
     "units":                "m",
     "decimalPlaces":        2,
     "qgcRebootRequired":    true
+},
+{
+    "name":                 "listenRTCM",
+    "shortDescription":     "Listen for RTCM Messages",
+    "longDescription":      "Listen for RTCM Messages.",
+    "type":                 "bool",
+    "defaultValue":         false,
+    "qgcRebootRequired":    true
+},
+{
+    "name":                 "forwardRTCM",
+    "shortDescription":     "Forward RTCM Messages",
+    "longDescription":      "Forward RTCM Messages.",
+    "type":                 "bool",
+    "defaultValue":         false,
+    "qgcRebootRequired":    true
+},
+{
+    "name":                 "forwardRTCMURI",
+    "shortDescription":     "Foward RTCM on:",
+    "longDescription":      "Interface to use for outgoing RTCM",
+    "type":                 "string",
+    "defaultValue":         "UDP",
+    "qgcRebootRequired":    true
+},
+{
+    "name":                 "forwardRTCMAddress",
+    "shortDescription":     "Foward RTCM to UDP address:",
+    "longDescription":      "IP address for outgoing RTCM",
+    "type":                 "string",
+    "defaultValue":         "127.0.0.1",
+    "qgcRebootRequired":    true
+},
+{
+    "name":                 "forwardRTCMPort",
+    "shortDescription":     "Forward RTCM to UDP port:",
+    "longDescription":      "UDP port for outgoing RTCM",
+    "type":                 "Uint16",
+    "defaultValue":         14550,
+    "qgcRebootRequired":    true
 }
 ]

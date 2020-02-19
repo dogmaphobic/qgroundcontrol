@@ -26,6 +26,15 @@ GPSManager::~GPSManager()
     disconnectGPS();
 }
 
+void GPSManager::setToolbox(QGCToolbox* toolbox) {
+    QGCTool::setToolbox(toolbox);
+    // Are we listening?
+    if(qgcApp()->toolbox()->settingsManager()->rtkSettings()->listenRTCM()->rawValue().toBool()) {
+        // Create RTCM device
+        _rtcmMavlink = new RTCMMavlink(*_toolbox);
+    }
+}
+
 void GPSManager::connectGPS(const QString& device, const QString& gps_type)
 {
     RTKSettings* rtkSettings = qgcApp()->toolbox()->settingsManager()->rtkSettings();
@@ -57,8 +66,10 @@ void GPSManager::connectGPS(const QString& device, const QString& gps_type)
                                    _requestGpsStop);
     _gpsProvider->start();
 
-    //create RTCM device
-    _rtcmMavlink = new RTCMMavlink(*_toolbox);
+    // Create RTCM device
+    if(!_rtcmMavlink) {
+        _rtcmMavlink = new RTCMMavlink(*_toolbox);
+    }
 
     connect(_gpsProvider, &GPSProvider::RTCMDataUpdate, _rtcmMavlink, &RTCMMavlink::RTCMDataUpdate);
 
@@ -81,11 +92,14 @@ void GPSManager::disconnectGPS(void)
         }
         delete(_gpsProvider);
     }
-    if (_rtcmMavlink) {
-        delete(_rtcmMavlink);
+    //-- Delete RTCM device but only if we are not listening
+    if(!qgcApp()->toolbox()->settingsManager()->rtkSettings()->listenRTCM()->rawValue().toBool()) {
+        if (_rtcmMavlink) {
+            delete(_rtcmMavlink);
+            _rtcmMavlink = nullptr;
+        }
     }
     _gpsProvider = nullptr;
-    _rtcmMavlink = nullptr;
 }
 
 

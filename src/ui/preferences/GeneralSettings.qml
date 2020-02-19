@@ -763,6 +763,17 @@ Rectangle {
                             property bool useFixedPosition: rtkSettings.useFixedBasePosition.rawValue
                             property real firstColWidth:    ScreenTools.defaultFontPixelWidth * 3
 
+                            QGCLabel {
+                                text:               qsTr("Local RTK Rover")
+                                Layout.columnSpan:  3
+                            }
+                            Rectangle {
+                                Layout.columnSpan:  3
+                                height:             1
+                                color:              qgcPal.text
+                                Layout.fillWidth:   true
+                            }
+
                             QGCRadioButton {
                                 text:               qsTr("Perform Survey-In")
                                 visible:            rtkGrid.rtkSettings.useFixedBasePosition.visible
@@ -868,6 +879,94 @@ Rectangle {
                                     rtkGrid.rtkSettings.fixedBasePositionAltitude.rawValue =    QGroundControl.gpsRtk.currentAltitude.rawValue
                                     rtkGrid.rtkSettings.fixedBasePositionAccuracy.rawValue =    QGroundControl.gpsRtk.currentAccuracy.rawValue
                                 }
+                            }
+                            Item { width: 1; height: 1; Layout.columnSpan: 3 }
+
+                            QGCLabel {
+                                text:               qsTr("Remote MAVLink RTCM")
+                                Layout.columnSpan:  3
+                            }
+
+                            Rectangle {
+                                Layout.columnSpan:  3
+                                height:             1
+                                color:              qgcPal.text
+                                Layout.fillWidth:   true
+                            }
+
+                            //-- Incoming RTCM Interface
+                            QGCLabel {
+                                text:               rtkGrid.rtkSettings.listenRTCM.shortDescription
+                                visible:            rtkGrid.rtkSettings.listenRTCM.visible
+                            }
+                            FactCheckBox {
+                                text:               ""
+                                fact:               rtkGrid.rtkSettings.listenRTCM
+                                visible:            rtkGrid.rtkSettings.listenRTCM.visible
+                                Layout.columnSpan:  2
+                            }
+
+                            //-- Outgoing RTCM Interface
+                            QGCLabel {
+                                text:               qsTr("Outgoing Remote RTCM (Relay)")
+                                visible:            rtkGrid.rtkSettings.forwardRTCM.visible || rtkGrid.rtkSettings.forwardRTCMURI.visible
+                            }
+
+                            QGCComboBox {
+                                id:                     rtkForwardPort
+                                Layout.preferredWidth:  _comboFieldWidth
+                                model:  ListModel {
+                                }
+                                Layout.columnSpan:  2
+                                onActivated: {
+                                    if (index != -1) {
+                                        var value = textAt(index)
+                                        if(value === gpsDisabled) {
+                                            rtkGrid.rtkSettings.forwardRTCM.value = false
+                                        } else {
+                                            rtkGrid.rtkSettings.forwardRTCM.value = true
+                                        }
+                                        rtkGrid.rtkSettings.forwardRTCMURI.value = value;
+                                    }
+                                }
+                                Component.onCompleted: {
+                                    rtkForwardPort.model.append({text: gpsDisabled})
+                                    rtkForwardPort.model.append({text: gpsUdpPort})
+                                    for (var i in QGroundControl.linkManager.serialPorts) {
+                                        rtkForwardPort.model.append({text:QGroundControl.linkManager.serialPorts[i]})
+                                    }
+                                    var index = rtkForwardPort.find(rtkGrid.rtkSettings.forwardRTCMURI.valueString);
+                                    if(index < 0) index = 0
+                                    rtkForwardPort.currentIndex = index;
+                                    if (QGroundControl.linkManager.serialPorts.length === 0) {
+                                        rtkForwardPort.model.append({text: "Serial <none available>"})
+                                    }
+                                }
+                            }
+
+
+                            //-- Outgoing RTCM UDP IP Address
+                            Item { width: rtkGrid.firstColWidth; height: 1 }
+                            QGCLabel {
+                                text:               rtkGrid.rtkSettings.forwardRTCMAddress.shortDescription
+                                visible:            rtkGrid.rtkSettings.forwardRTCMAddress.visible && rtkForwardPort.currentIndex === 1
+                            }
+                            FactTextField {
+                                fact:               rtkGrid.rtkSettings.forwardRTCMAddress
+                                visible:            rtkGrid.rtkSettings.forwardRTCMAddress.visible && rtkForwardPort.currentIndex === 1
+                                Layout.fillWidth:   true
+                            }
+
+                            //-- Outgoing RTCM UDP Port
+                            Item { width: rtkGrid.firstColWidth; height: 1 }
+                            QGCLabel {
+                                text:               rtkGrid.rtkSettings.forwardRTCMPort.shortDescription
+                                visible:            rtkGrid.rtkSettings.forwardRTCMPort.visible && rtkForwardPort.currentIndex === 1
+                            }
+                            FactTextField {
+                                fact:               rtkGrid.rtkSettings.forwardRTCMPort
+                                visible:            rtkGrid.rtkSettings.forwardRTCMPort.visible && rtkForwardPort.currentIndex === 1
+                                Layout.fillWidth:   true
                             }
                         }
                     }
