@@ -540,7 +540,7 @@ Item {
         }
 
         ToolStrip {
-            visible:            (activeVehicle ? activeVehicle.guidedModeSupported : true) && !QGroundControl.videoManager.fullScreen
+            visible:            (activeVehicle ? activeVehicle.guidedModeSupported : true) && !QGroundControl.videoManager.fullScreen && QGroundControl.corePlugin.options.showToolstrip
             id:                 toolStrip
 
             anchors.leftMargin: isInstrumentRight() ? _toolsMargin : undefined

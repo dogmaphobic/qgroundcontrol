@@ -67,6 +67,7 @@ public:
     Q_PROPERTY(bool                     enableMultiVehicleList          READ enableMultiVehicleList         CONSTANT)
     Q_PROPERTY(bool                     enableMapScale                  READ enableMapScale                 CONSTANT)
     Q_PROPERTY(bool                     enableSaveMainWindowPosition    READ enableSaveMainWindowPosition   CONSTANT)
+    Q_PROPERTY(bool                     showToolstrip                   READ showToolstrip                  NOTIFY showToolstripChanged)
 
     /// Should QGC hide its settings menu and colapse it into one single menu (Settings and Vehicle Setup)?
     /// @return true if QGC should consolidate both menus into one.
@@ -146,6 +147,9 @@ public:
     virtual float   devicePixelRatio                () const { return 0.0f; }
     virtual float   devicePixelDensity              () const { return 0.0f; }
 
+    /// Control visibility of Toolstrip
+    virtual bool    showToolstrip                   () const { return true; }
+
 signals:
     void showSensorCalibrationCompassChanged    (bool show);
     void showSensorCalibrationGyroChanged       (bool show);
@@ -164,6 +168,7 @@ signals:
     void showSimpleMissionStartChanged          ();
     void devicePixelRatioChanged                ();
     void devicePixelDensityChanged              ();
+    void showToolstripChanged                   ();
 
 private:
     CustomInstrumentWidget* _defaultInstrumentWidget;
