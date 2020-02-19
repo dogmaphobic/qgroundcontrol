@@ -329,6 +329,9 @@ public:
     /// Sends the appropriate mavlink message for follow me support
     virtual void sendGCSMotionReport(Vehicle* vehicle, FollowMe::GCSMotionReport& motionReport, uint8_t estimatationCapabilities);
 
+    /// Is joystick supported?
+    virtual bool supportsJoystick() { return true; }
+
     // FIXME: Hack workaround for non pluginize FollowMe support
     static const QString px4FollowMeFlightMode;
 
