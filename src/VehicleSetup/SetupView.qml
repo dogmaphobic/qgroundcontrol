@@ -265,7 +265,7 @@ Rectangle {
                 setupIndicator:     true
                 setupComplete:      joystickManager.activeJoystick ? joystickManager.activeJoystick.calibrated : false
                 exclusiveGroup:     setupButtonGroup
-                visible:            _fullParameterVehicleAvailable && joystickManager.joysticks.length !== 0
+                visible:            _fullParameterVehicleAvailable && joystickManager.joysticks.length !== 0 && activeVehicle.supportsJoystick
                 text:               qsTr("Joystick")
                 Layout.fillWidth:   true
                 onClicked:          showPanel(this, "JoystickConfig.qml")

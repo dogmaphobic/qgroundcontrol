@@ -633,6 +633,7 @@ public:
     Q_PROPERTY(bool                 gimbalData              READ gimbalData                                             NOTIFY gimbalDataChanged)
     Q_PROPERTY(bool                 isROIEnabled            READ isROIEnabled                                           NOTIFY isROIEnabledChanged)
     Q_PROPERTY(CheckList            checkListState          READ checkListState         WRITE setCheckListState         NOTIFY checkListStateChanged)
+    Q_PROPERTY(bool                 supportsJoystick        READ supportsJoystick                                       CONSTANT)
 
     // The following properties relate to Orbit status
     Q_PROPERTY(bool             orbitActive     READ orbitActive        NOTIFY orbitActiveChanged)
@@ -1114,6 +1115,7 @@ public:
 
     CheckList   checkListState          () { return _checkListState; }
     void        setCheckListState       (CheckList cl)  { _checkListState = cl; emit checkListStateChanged(); }
+    bool        supportsJoystick        ();
 
 public slots:
     void setVtolInFwdFlight             (bool vtolInFwdFlight);

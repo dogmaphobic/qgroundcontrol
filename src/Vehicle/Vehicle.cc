@@ -3820,6 +3820,14 @@ QString Vehicle::vehicleImageCompass() const
         return QString();
 }
 
+bool Vehicle::supportsJoystick()
+{
+    if(_firmwarePlugin)
+        return _firmwarePlugin->supportsJoystick();
+    else
+        return false;
+}
+
 const QVariantList& Vehicle::toolBarIndicators()
 {
     if(_firmwarePlugin) {
