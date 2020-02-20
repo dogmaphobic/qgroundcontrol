@@ -14,6 +14,7 @@ import QtQuick.Controls         2.4
 import QtQuick.Layouts          1.11
 import QtQuick.Dialogs          1.3
 import QtPositioning            5.2
+import QtLocation               5.12
 
 import QGroundControl                       1.0
 import QGroundControl.Controllers           1.0
@@ -57,6 +58,39 @@ Item {
     Connections {
         target: currentAltitude
         onValueChanged: setMapCenter
+    }
+
+    Connections {
+        target: mainWindow
+        onFlightDisplayMapChanged: {
+            if(mainWindow.flightDisplayMap) {
+                mainWindow.flightDisplayMap.addMapItemView(waypointView)
+            }
+        }
+    }
+
+    MapItemView {
+        id:         waypointView
+        model:      CustomQuickInterface.waypoints
+        delegate:   MapQuickItem {
+            anchorPoint.x:  sourceItem.width  / 2
+            anchorPoint.y:  sourceItem.height / 2
+            coordinate:     object.coordinate
+            sourceItem: Rectangle {
+                width:      _radius * 2
+                height:     _radius * 2
+                radius:     _radius
+                color:      Qt.rgba(0.2,0,0,0.1)
+                border.color: Qt.rgba(0,0,0,0.75)
+                border.width: 1
+                readonly property real _radius: ScreenTools.defaultFontPixelHeight
+                QGCLabel {
+                    anchors.centerIn:   parent
+                    color:              "white"
+                    text:               object.id
+                }
+            }
+        }
     }
 
     //-------------------------------------------------------------------------

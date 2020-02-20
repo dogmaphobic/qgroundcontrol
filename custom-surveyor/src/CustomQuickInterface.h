@@ -21,6 +21,8 @@
 #include <QGeoPositionInfoSource>
 #include <QSoundEffect>
 
+class GPXWriter;
+
 //-----------------------------------------------------------------------------
 // QtQuick Interface (UI)
 class CustomQuickInterface : public QObject
@@ -35,17 +37,19 @@ public:
     Q_PROPERTY(bool                 ready                       READ ready                                              NOTIFY readyChanged)
     Q_PROPERTY(bool                 tracking                    READ tracking               WRITE  setTracking          NOTIFY trackingChanged)
     Q_PROPERTY(int                  points                      READ points                                             NOTIFY pointsChanged)
+    Q_PROPERTY(QmlObjectListModel*  waypoints                   READ waypoints                                          CONSTANT)
 
-    Q_INVOKABLE void addWaypoint    ();
-    Q_INVOKABLE void reset          ();
+    Q_INVOKABLE void        addWaypoint         ();
+    Q_INVOKABLE void        reset               ();
 
-    void        init                ();
+    void                    init                ();
 
-    double      altitudeRelative    () { return _altitudeRelative; }
-    double      altitudeAMSL        () { return _altitudeAMSL; }
-    bool        tracking            () { return _tracking; }
-    bool        ready               () { return _ready; }
-    int         points              () { return _points; }
+    double                  altitudeRelative    () { return _altitudeRelative; }
+    double                  altitudeAMSL        () { return _altitudeAMSL; }
+    bool                    tracking            () { return _tracking; }
+    bool                    ready               () { return _ready; }
+    int                     points              () { return _points; }
+    QmlObjectListModel*     waypoints           () { return &_waypoints; }
 
     void        setTracking         (bool set);
 
@@ -66,20 +70,22 @@ private slots:
 
 private:
     void _closeFile                 ();
-    void _addWaypoint               (bool wp, QGeoCoordinate coordinate, double altitude);
+    void _addTracking               (QGeoCoordinate coordinate, double altitude, bool wp = false);
 
 private:
-    Vehicle*        _vehicle            = nullptr;
-    double          _altitudeRelative   = 0;
-    double          _altitudeAMSL       = 0;
-    bool            _tracking           = false;
-    bool            _ready              = false;
-    int             _points             = 0;
-    QTimer          _trackTimer;
-    QGeoCoordinate  _lastPoint;
-    double          _lastAltitude;
-    QSoundEffect    _startStopSound;
-    QSoundEffect    _activeSound;
-    QSoundEffect    _captureSound;
-    QFile           _trackFile;
+    Vehicle*            _vehicle            = nullptr;
+    double              _altitudeRelative   = 0;
+    double              _altitudeAMSL       = 0;
+    bool                _tracking           = false;
+    bool                _ready              = false;
+    int                 _points             = 0;
+    QTimer              _trackTimer;
+    QGeoCoordinate      _lastPoint;
+    double              _lastAltitude;
+    QSoundEffect        _startStopSound;
+    QSoundEffect        _activeSound;
+    QSoundEffect        _captureSound;
+    QFile               _trackFile;
+    QmlObjectListModel  _waypoints;
+    GPXWriter*          _waypointWriter     = nullptr;
 };

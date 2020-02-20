@@ -21,6 +21,7 @@
 
 #include "CustomPlugin.h"
 #include "CustomQuickInterface.h"
+#include "gpxwriter.h"
 
 #include <QSettings>
 #include <QPluginLoader>
@@ -166,9 +167,20 @@ CustomQuickInterface::reset()
         _tracking = false;
         emit trackingChanged();
         _startStopSound.play();
-        _points = 0;
-        emit pointsChanged();
     }
+    if(_waypointWriter) {
+        if(_waypoints.count()) {
+            for(int i = 0; i < _waypoints.count(); i++) {
+                _waypointWriter->addWaypoint(qobject_cast<GPXWayPoint*>(_waypoints.get(i)));
+            }
+            _waypointWriter->writeAndClose();
+            _waypoints.clearAndDeleteContents();
+        }
+        delete _waypointWriter;
+        _waypointWriter = nullptr;
+    }
+    _points = 0;
+    emit pointsChanged();
 }
 
 //----------------------------------------------------------------------------------------
@@ -215,24 +227,22 @@ CustomQuickInterface::_vehicleCoordinateChanged(QGeoCoordinate coordinate)
                     // Vehicle has changed elevation far enough
                     _lastAltitude = _altitudeAMSL;
                     _lastPoint = coordinate;
-                    _addWaypoint(false, coordinate, _altitudeAMSL);
+                    _addTracking(coordinate, _altitudeAMSL);
                 }
             }
         } else {
             // Add the very first trajectory point to the list
             _lastPoint = coordinate;
-            _addWaypoint(false, coordinate, _altitudeAMSL);
+            _addTracking(coordinate, _altitudeAMSL);
         }
     }
 }
 
 //----------------------------------------------------------------------------------------
 void
-CustomQuickInterface::_addWaypoint(bool wp, QGeoCoordinate coordinate, double altitude)
+CustomQuickInterface::_addTracking(QGeoCoordinate coordinate, double altitude, bool wp)
 {
     if(_tracking && _trackFile.isOpen()) {
-        _points++;
-        emit pointsChanged();
         QString body(kTrackingBody);
         QString pad;
         pad.sprintf("%f", coordinate.latitude());
@@ -257,7 +267,10 @@ CustomQuickInterface::_addWaypoint(bool wp, QGeoCoordinate coordinate, double al
             body.replace("trkpt", "wpt");
         }
         _trackFile.write(body.toUtf8());
-        _captureSound.play();
+        _trackFile.flush();
+        if(!wp) {
+            _captureSound.play();
+        }
     }
 }
 
@@ -265,8 +278,17 @@ CustomQuickInterface::_addWaypoint(bool wp, QGeoCoordinate coordinate, double al
 void
 CustomQuickInterface::addWaypoint()
 {
-    if(_tracking && _trackFile.isOpen() && _vehicle) {
-        _addWaypoint(true, _vehicle->coordinate(), _altitudeAMSL);
+    if(_vehicle) {
+        if(!_waypointWriter) {
+            _waypointWriter = new GPXWriter(this);
+        }
+        GPXWayPoint* wp = new GPXWayPoint(QGeoCoordinate(_vehicle->coordinate().latitude(), _vehicle->coordinate().longitude(), _altitudeAMSL), _points, this);
+        wp->setGPSInfo(dynamic_cast<VehicleGPSFactGroup*>(_vehicle->gpsFactGroup()));
+        _waypoints.append(wp);
+        _addTracking(_vehicle->coordinate(), _altitudeAMSL, true);
+        _points++;
+        emit pointsChanged();
+        _captureSound.play();
     }
 }
 

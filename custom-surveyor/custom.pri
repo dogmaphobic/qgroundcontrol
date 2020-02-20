@@ -37,7 +37,7 @@ DEFINES += QGC_DISABLE_PAIRING
 CONFIG  += DISABLE_VIDEOSTREAMING
 
 QT += \
-    multimedia
+    multimedia \
 
 # Our own, custom resources
 RESOURCES += \
@@ -50,10 +50,12 @@ QML_IMPORT_PATH += \
 SOURCES += \
     $$PWD/src/CustomPlugin.cc \
     $$PWD/src/CustomQuickInterface.cc \
+    $$PWD/src/gpxwriter.cc \
 
 HEADERS += \
     $$PWD/src/CustomPlugin.h \
     $$PWD/src/CustomQuickInterface.h \
+    $$PWD/src/gpxwriter.h \
 
 INCLUDEPATH += \
     $$PWD/src \
