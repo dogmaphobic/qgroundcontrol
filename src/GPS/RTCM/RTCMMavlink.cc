@@ -41,7 +41,7 @@ RTCMMavlink::RTCMMavlink(QGCToolbox& toolbox)
                 _udpSocket = new QUdpSocket(this);
                 _udpSocket->setProxy(QNetworkProxy::NoProxy);
                 _udpSocket->setSocketOption(QAbstractSocket::SendBufferSizeSocketOption, 256 * 1024);
-                _mavlinkChannel = _mavlinkChannel = qgcApp()->toolbox()->linkManager()->_reserveMavlinkChannel();
+                _mavlinkChannel = qgcApp()->toolbox()->linkManager()->_reserveMavlinkChannel();
             }
         } else {
             QString uart = rtkSettings->forwardRTCMURI()->rawValue().toString();
@@ -54,6 +54,7 @@ RTCMMavlink::RTCMMavlink(QGCToolbox& toolbox)
                     _serialPort->setFlowControl  (QSerialPort::NoFlowControl);
                     _serialPort->setStopBits     (QSerialPort::OneStop);
                     _serialPort->setParity       (QSerialPort::NoParity);
+                    _mavlinkChannel = qgcApp()->toolbox()->linkManager()->_reserveMavlinkChannel();
                 } else {
                     qWarning() << "Error opening RTCM port:" << uart;
                 }
