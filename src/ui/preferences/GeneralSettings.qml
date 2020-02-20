@@ -924,6 +924,7 @@ Rectangle {
                                         if(value === gpsDisabled) {
                                             rtkGrid.rtkSettings.forwardRTCM.value = false
                                         } else {
+                                            QGroundControl.settingsManager.autoConnectSettings.autoConnectSiKRadio.rawValue = (value < 2)
                                             rtkGrid.rtkSettings.forwardRTCM.value = true
                                         }
                                         rtkGrid.rtkSettings.forwardRTCMURI.value = value;
