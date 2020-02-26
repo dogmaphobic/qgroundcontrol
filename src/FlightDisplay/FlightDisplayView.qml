@@ -129,6 +129,9 @@ Item {
         if(QGroundControl.corePlugin.options.preFlightChecklistUrl.toString().length) {
             checkList.source = QGroundControl.corePlugin.options.preFlightChecklistUrl
         }
+        if(QGroundControl.corePlugin.options.flightDisplayViewWidgetstUrl.toString().length) {
+            flightDisplayViewWidgets.source = QGroundControl.corePlugin.options.flightDisplayViewWidgetstUrl
+        }
     }
 
     // The following code is used to track vehicle states for showing the mission complete dialog
@@ -315,7 +318,7 @@ Item {
                 anchors.fill:               parent
                 guidedActionsController:    _guidedController
                 missionController:          _planController
-                flightWidgets:              flightDisplayViewWidgets
+                flightWidgets:              flightDisplayViewWidgets.item
                 rightPanelWidth:            ScreenTools.defaultFontPixelHeight * 9
                 multiVehicleView:           !singleVehicleView.checked
                 scaleState:                 (mainIsMap && flyViewOverlay.item) ? (flyViewOverlay.item.scaleState ? flyViewOverlay.item.scaleState : "bottomMode") : "bottomMode"
@@ -482,7 +485,7 @@ Item {
             }
         }
 
-        FlightDisplayViewWidgets {
+        Loader {
             id:                 flightDisplayViewWidgets
             z:                  _mapAndVideo.z + 4
             height:             availableHeight - (singleMultiSelector.visible ? singleMultiSelector.height + _toolsMargin : 0) - _toolsMargin
@@ -490,9 +493,13 @@ Item {
             anchors.right:      altitudeSlider.visible ? altitudeSlider.left : parent.right
             anchors.bottom:     parent.bottom
             anchors.top:        singleMultiSelector.visible? singleMultiSelector.bottom : undefined
-            useLightColors:     isBackgroundDark
-            missionController:  _missionController
             visible:            singleVehicleView.checked && !QGroundControl.videoManager.fullScreen
+            onSourceChanged: {
+                if(source !== "") {
+                    flightDisplayViewWidgets.item.useLightColors     = isBackgroundDark
+                    flightDisplayViewWidgets.item.missionController  = _missionController
+                }
+            }
         }
 
         //-------------------------------------------------------------------------

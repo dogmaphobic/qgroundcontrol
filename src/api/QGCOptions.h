@@ -31,6 +31,7 @@ public:
     Q_PROPERTY(CustomInstrumentWidget*  instrumentWidget                READ instrumentWidget               CONSTANT)
     Q_PROPERTY(QUrl                     flyViewOverlay                  READ flyViewOverlay                 CONSTANT)
     Q_PROPERTY(QUrl                     preFlightChecklistUrl           READ preFlightChecklistUrl          CONSTANT)
+    Q_PROPERTY(QUrl                     flightDisplayViewWidgetstUrl    READ flightDisplayViewWidgetstUrl   CONSTANT)
 
     Q_PROPERTY(QUrl                     mainToolbarUrl                  READ mainToolbarUrl                 CONSTANT)
     Q_PROPERTY(QUrl                     planToolbarUrl                  READ planToolbarUrl                 CONSTANT)
@@ -94,6 +95,9 @@ public:
 
     /// Provides an optional, custom preflight checklist
     virtual QUrl    preFlightChecklistUrl           () const { return QUrl::fromUserInput("qrc:/qml/PreFlightCheckList.qml"); }
+
+    /// Allows overriding the Flight Display View Widgets
+    virtual QUrl    flightDisplayViewWidgetstUrl    () const { return QUrl::fromUserInput("qrc:/qml/FlightDisplayViewWidgets.qml"); }
 
     /// Allows replacing the Main toolbar
     virtual QUrl    mainToolbarUrl                  () const;
