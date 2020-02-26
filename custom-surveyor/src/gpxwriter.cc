@@ -17,11 +17,12 @@
 #include "SettingsManager.h"
 
 //----------------------------------------------------------------------------------------
-GPXWayPoint::GPXWayPoint(QGeoCoordinate coordinate, int id, QObject *parent)
+GPXWayPoint::GPXWayPoint(QGeoCoordinate coordinate, int id, double relElev, QObject *parent)
     : QObject(parent)
     , _id(id)
     , _coordinate(coordinate)
     , _timeStamp(QDateTime::currentDateTimeUtc())
+    , _relElev(relElev)
 {
 }
 
@@ -56,15 +57,17 @@ void
 GPXWriter::addWaypoint(GPXWayPoint *wp)
 {
     if(wp) {
-        QString lat, lon, elev;
+        QString lat, lon, elev, rel;
         lat.sprintf("%f", wp->coordinate().latitude());
         lon.sprintf("%f", wp->coordinate().longitude());
         elev.sprintf("%f", wp->coordinate().altitude());
+        rel.sprintf("%f", wp->_relElev);
         _stream.writeStartElement("wpt");
         _stream.writeAttribute("lat", lat);
         _stream.writeAttribute("lon", lon);
         _stream.writeTextElement("name", QString::number(wp->id()));
         _stream.writeTextElement("elev", elev);
+        _stream.writeTextElement("relElev", rel);
         _stream.writeTextElement("time", wp->_timeStamp.toString(Qt::ISODateWithMs));
         if(!wp->description().isEmpty()) {
             _stream.writeTextElement("desc", wp->description());

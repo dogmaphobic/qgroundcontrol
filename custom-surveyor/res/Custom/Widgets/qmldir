@@ -4,4 +4,5 @@ CustomArtificialHorizon 1.0     CustomArtificialHorizon.qml
 CustomAttitudeWidget    1.0     CustomAttitudeWidget.qml
 CustomIconButton        1.0     CustomIconButton.qml
 CustomSignalStrength    1.0     CustomSignalStrength.qml
+CustomTextArea          1.0     CustomTextArea.qml
 CustomToolBarButton     1.0     CustomToolBarButton.qml

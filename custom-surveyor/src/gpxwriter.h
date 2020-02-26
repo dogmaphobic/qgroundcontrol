@@ -25,7 +25,7 @@ class GPXWayPoint : public QObject
     Q_OBJECT
     friend class GPXWriter;
 public:
-    explicit GPXWayPoint(QGeoCoordinate coordinate, int id, QObject *parent = nullptr);
+    explicit GPXWayPoint(QGeoCoordinate coordinate, int id, double relElev, QObject *parent = nullptr);
 
     Q_PROPERTY(int              id              READ id                                        CONSTANT)
     Q_PROPERTY(QGeoCoordinate   coordinate      READ coordinate         WRITE setCoordinate    NOTIFY coordinateChanged)
@@ -49,6 +49,7 @@ private:
     QString         _description;
     QGeoCoordinate  _coordinate;
     QDateTime       _timeStamp;
+    double          _relElev        = 0.0;
     int             _gpsCount       = 0;
     double          _gpsHdop        = 0.0;
     double          _gpsVdop        = 0.0;

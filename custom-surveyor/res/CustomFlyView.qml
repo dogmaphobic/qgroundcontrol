@@ -36,6 +36,8 @@ Item {
     readonly property real _heading:            activeVehicle   ? activeVehicle.heading.rawValue : 0
     readonly property real _indicatorsHeight:   ScreenTools.defaultFontPixelHeight
     readonly property bool _rtkRelay:           QGroundControl.gpsRtk.active.value && QGroundControl.settingsManager.rtkSettings.forwardRTCM.value
+    readonly property bool _ready:              activeVehicle && activeVehicle.gps.lock.value > 2
+    readonly property real _separator:          ScreenTools.defaultFontPixelHeight * 0.5
 
     readonly property Fact currentLatitude:     _rtkRelay ? QGroundControl.gpsRtk.currentLatitude  : null
     readonly property Fact currentLongitude:    _rtkRelay ? QGroundControl.gpsRtk.currentLongitude : null
@@ -83,12 +85,89 @@ Item {
                 color:      Qt.rgba(0.2,0,0,0.1)
                 border.color: Qt.rgba(0,0,0,0.75)
                 border.width: 1
-                readonly property real _radius: ScreenTools.defaultFontPixelHeight
+                readonly property real _radius: ScreenTools.defaultFontPixelHeight * 0.75
                 QGCLabel {
                     anchors.centerIn:   parent
                     color:              "white"
                     text:               object.id
                 }
+                MouseArea {
+                    anchors.fill:   parent
+                    onClicked: {
+                        waypointEditor.wpObject = object
+                        waypointEditor.open()
+                    }
+                }
+            }
+        }
+    }
+
+    //---------------------------------------------------------------
+    //-- Waypoint Editor
+    Popup {
+        id:                 waypointEditor
+        property var wpObject: null
+        width:              wpCol.width  + (ScreenTools.defaultFontPixelWidth  * 4)
+        height:             wpCol.height + (ScreenTools.defaultFontPixelHeight * 4)
+        modal:              true
+        focus:              true
+        parent:             Overlay.overlay
+        closePolicy:        Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        x:                  Math.round((mainWindow.width  - width)  * 0.5)
+        y:                  Math.round((mainWindow.height - height) * 0.5)
+        background: Rectangle {
+            anchors.fill:   parent
+            color:          Qt.rgba(0,0,0,0.75)
+            radius:         ScreenTools.defaultFontPixelWidth
+        }
+        onVisibleChanged: {
+            if(!visible && waypointEditor.wpObject) {
+                waypointEditor.wpObject.description = waypointDescription.text
+            }
+        }
+        Column {
+            id:                 wpCol
+            spacing:            ScreenTools.defaultFontPixelHeight * 0.5
+            anchors.centerIn:   parent
+            QGCLabel {
+                text:       qsTr("Waypoint " + (waypointEditor.wpObject ? waypointEditor.wpObject.id : "N/A"))
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+            Item { width: 1; height: 1; }
+            GridLayout {
+                anchors.margins:    ScreenTools.defaultFontPixelHeight
+                columnSpacing:      ScreenTools.defaultFontPixelWidth
+                anchors.horizontalCenter: parent.horizontalCenter
+                columns: 2
+                QGCLabel {
+                    text:       qsTr("LAT:")
+                }
+                QGCLabel {
+                    text:       waypointEditor.wpObject ? waypointEditor.wpObject.coordinate.latitude.toFixed(6) : ""
+                }
+                QGCLabel {
+                    text:       qsTr("LON:")
+                }
+                QGCLabel {
+                    text:       waypointEditor.wpObject ? waypointEditor.wpObject.coordinate.longitude.toFixed(6) : ""
+                }
+                QGCLabel {
+                    text:       qsTr("ALT:")
+                }
+                QGCLabel {
+                    text:       waypointEditor.wpObject ? waypointEditor.wpObject.coordinate.altitude.toFixed(2) : ""
+                }
+            }
+            Item { width: 1; height: 1; }
+            QGCLabel {
+                text:               qsTr("Description")
+            }
+            CustomTextArea {
+                id:                 waypointDescription
+                width:              ScreenTools.defaultFontPixelWidth  * 30
+                height:             ScreenTools.defaultFontPixelHeight * 4
+                font.pointSize:     ScreenTools.defaultFontPointSize
+                text:               waypointEditor.wpObject ? waypointEditor.wpObject.description : ""
             }
         }
     }
@@ -166,7 +245,7 @@ Item {
     }
 
     //-------------------------------------------------------------------------
-    //-- Start/Stop Tracking
+    //-- Actions
     Rectangle {
         height:                         trackCol.height + (ScreenTools.defaultFontPixelHeight * 2)
         width:                          trackCol.width  + (ScreenTools.defaultFontPixelWidth  * 2)
@@ -174,8 +253,7 @@ Item {
         radius:                         6
         clip:                           true
         visible:                        !_rtkRelay
-        anchors.top:                    parent.top
-        anchors.topMargin:              ScreenTools.defaultFontPixelHeight * 4
+        anchors.verticalCenter:         parent.verticalCenter
         anchors.right:                  parent.right
         anchors.rightMargin:            ScreenTools.defaultFontPixelWidth
         Column {
@@ -199,15 +277,16 @@ Item {
                     width:              parent.width * 0.75
                     height:             width
                     radius:             width * 0.5
-                    color:              activeVehicle ? qgcPal.colorGreen : qgcPal.text
+                    color:              _ready ? qgcPal.colorGreen : qgcPal.text
                     visible:            !pauseTracking.visible
+                    opacity:            _ready ? 1 : 0.5
                     anchors.centerIn:   parent
                 }
                 Rectangle {
                     id:                 pauseTracking
                     width:              parent.width * 0.5
                     height:             width
-                    color:              activeVehicle ? qgcPal.colorRed : qgcPal.text
+                    color:              qgcPal.colorRed
                     visible:            CustomQuickInterface.tracking
                     anchors.centerIn:   parent
                 }
@@ -215,12 +294,13 @@ Item {
                     anchors.fill:   parent
                     enabled:        activeVehicle
                     onClicked: {
-                        if(activeVehicle) {
+                        if(_ready || CustomQuickInterface.tracking) {
                             CustomQuickInterface.tracking = !CustomQuickInterface.tracking
                         }
                     }
                 }
             }
+            Item { width: 1; height: _separator; }
             //-- Waypoint
             QGCLabel {
                 text:                   "Waypoint"
@@ -238,19 +318,21 @@ Item {
                     width:              parent.width * 0.75
                     height:             width
                     radius:             width * 0.5
-                    color:              activeVehicle ? qgcPal.colorGreen : qgcPal.text
+                    color:              _ready ? qgcPal.colorGreen : qgcPal.text
+                    opacity:            _ready ? 1 : 0.5
                     anchors.centerIn:   parent
                 }
                 MouseArea {
                     anchors.fill:   parent
                     enabled:        activeVehicle
                     onClicked: {
-                        if(activeVehicle) {
+                        if(_ready) {
                             CustomQuickInterface.addWaypoint()
                         }
                     }
                 }
             }
+            Item { width: 1; height: _separator; }
             //-- Waypoint
             QGCLabel {
                 text:                   "Reset"
@@ -268,15 +350,30 @@ Item {
                     width:              parent.width * 0.75
                     height:             width
                     radius:             width * 0.5
-                    color:              activeVehicle ? qgcPal.colorRed : qgcPal.text
+                    color:              qgcPal.colorRed
                     anchors.centerIn:   parent
+                }
+                MessageDialog {
+                    id:                 resetDialog
+                    visible:            false
+                    icon:               StandardIcon.Warning
+                    standardButtons:    StandardButton.Yes | StandardButton.No
+                    title:              qsTr("Reset Waypoints")
+                    text:               qsTr("Save and reset all waypoints?")
+                    onYes: {
+                        CustomQuickInterface.reset()
+                        resetDialog.close()
+                    }
+                    onNo: {
+                        resetDialog.close()
+                    }
                 }
                 MouseArea {
                     anchors.fill:   parent
                     enabled:        activeVehicle
                     onClicked: {
                         if(activeVehicle) {
-                            CustomQuickInterface.reset()
+                            resetDialog.open()
                         }
                     }
                 }

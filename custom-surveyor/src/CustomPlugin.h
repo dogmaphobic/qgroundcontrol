@@ -34,6 +34,7 @@ public:
     //-- We have our own toolbar
     QUrl        mainToolbarUrl                  () const final { return QUrl::fromUserInput("qrc:/custom/CustomMainToolBar.qml"); }
     QUrl        planToolbarUrl                  () const final { return QUrl::fromUserInput("qrc:/custom/CustomMainToolBar.qml"); }
+    QUrl        flightDisplayViewWidgetstUrl    () const final { return QUrl(); }
     //-- Don't show instrument widget
     CustomInstrumentWidget* instrumentWidget    () final { return nullptr; }
 

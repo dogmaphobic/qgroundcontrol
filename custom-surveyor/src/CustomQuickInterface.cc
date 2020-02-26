@@ -203,9 +203,11 @@ CustomQuickInterface::setTracking(bool set)
                 header.replace("##TIME_STAMP##", QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
                 _trackFile.write(header.toUtf8());
                 _startStopSound.play();
+                _vehicle->setArmed(true);
             }
         } else {
             _vehicle->trajectoryPoints()->pause();
+            _vehicle->setArmed(false);
             _closeFile();
             _startStopSound.play();
         }
@@ -282,11 +284,12 @@ CustomQuickInterface::addWaypoint()
         if(!_waypointWriter) {
             _waypointWriter = new GPXWriter(this);
         }
-        GPXWayPoint* wp = new GPXWayPoint(QGeoCoordinate(_vehicle->coordinate().latitude(), _vehicle->coordinate().longitude(), _altitudeAMSL), _points, this);
+        GPXWayPoint* wp = new GPXWayPoint(QGeoCoordinate(_vehicle->coordinate().latitude(), _vehicle->coordinate().longitude(), _altitudeAMSL), _points, _altitudeRelative, this);
         wp->setGPSInfo(dynamic_cast<VehicleGPSFactGroup*>(_vehicle->gpsFactGroup()));
         _waypoints.append(wp);
         _addTracking(_vehicle->coordinate(), _altitudeAMSL, true);
         _points++;
+        _lastPoint = _vehicle->coordinate();
         emit pointsChanged();
         _captureSound.play();
     }

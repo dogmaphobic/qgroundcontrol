@@ -28,6 +28,7 @@
         <file alias="Custom/Widgets/CustomAttitudeWidget.qml">res/Custom/Widgets/CustomAttitudeWidget.qml</file>
         <file alias="Custom/Widgets/CustomIconButton.qml">res/Custom/Widgets/CustomIconButton.qml</file>
         <file alias="Custom/Widgets/CustomSignalStrength.qml">res/Custom/Widgets/CustomSignalStrength.qml</file>
+        <file alias="Custom/Widgets/CustomTextArea.qml">res/Custom/Widgets/CustomTextArea.qml</file>
         <file alias="Custom/Widgets/CustomToolBarButton.qml">res/Custom/Widgets/CustomToolBarButton.qml</file>
         <file alias="Custom/Widgets/qmldir">res/Custom/Widgets/qmldir</file>
     </qresource>
