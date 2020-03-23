@@ -35,6 +35,17 @@ Item {
             color:  qgcPal.window
             border.color:   qgcPal.text
 
+            function toHHMMSS(s) {
+                var sec_num = parseInt(s, 10);
+                var hours   = Math.floor(sec_num / 3600);
+                var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
+                var seconds = sec_num - (hours * 3600) - (minutes * 60);
+                if (hours   < 10) {hours   = "0" + hours;}
+                if (minutes < 10) {minutes = "0" + minutes;}
+                if (seconds < 10) {seconds = "0" + seconds;}
+                return hours+':'+minutes+':'+seconds;
+            }
+
             Column {
                 id:                 gpsCol
                 spacing:            ScreenTools.defaultFontPixelHeight * 0.5
@@ -44,7 +55,7 @@ Item {
 
                 QGCLabel {
                     id:             gpsLabel
-                    text: (QGroundControl.gpsRtk.active.value) ? qsTr("Survey-in Active") : qsTr("RTK Streaming")
+                    text:           (QGroundControl.gpsRtk.active.value) ? qsTr("Survey-in Active") : qsTr("RTK Streaming")
                     font.family:    ScreenTools.demiboldFontFamily
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
@@ -58,21 +69,29 @@ Item {
                     columns: 2
 
                     QGCLabel {
-                        text: qsTr("Duration:")
-                        visible: QGroundControl.gpsRtk.active.value
+                        text:       qsTr("Duration:")
+                        visible:    QGroundControl.gpsRtk.active.value
                         }
                     QGCLabel {
-                        text: QGroundControl.gpsRtk.currentDuration.value + ' s'
-                        visible: QGroundControl.gpsRtk.active.value
+                        text:       toHHMMSS(QGroundControl.gpsRtk.currentDuration.value)
+                        visible:    QGroundControl.gpsRtk.active.value
                         }
                     QGCLabel {
                         // during survey-in show the current accuracy, after that show the final accuracy
-                        text: QGroundControl.gpsRtk.valid.value ? qsTr("Accuracy:") : qsTr("Current Accuracy:")
-                        visible: QGroundControl.gpsRtk.currentAccuracy.value > 0
+                        text:       QGroundControl.gpsRtk.valid.value ? qsTr("Accuracy:") : qsTr("Current Accuracy:")
+                        visible:    QGroundControl.gpsRtk.currentAccuracy.value > 0
                         }
                     QGCLabel {
-                        text: QGroundControl.gpsRtk.currentAccuracy.valueString + " " + QGroundControl.appSettingsDistanceUnitsString
-                        visible: QGroundControl.gpsRtk.currentAccuracy.value > 0
+                        text:       QGroundControl.gpsRtk.currentAccuracy.valueString + " " + QGroundControl.appSettingsDistanceUnitsString
+                        visible:    QGroundControl.gpsRtk.currentAccuracy.value > 0
+                        }
+                    QGCLabel {
+                        text:       QGroundControl.gpsRtk.valid.value ? qsTr("Altitude:") : qsTr("Current Altitude:")
+                        visible:    QGroundControl.gpsRtk.currentAltitude.value > 0
+                        }
+                    QGCLabel {
+                        text:       QGroundControl.gpsRtk.currentAltitude.valueString + " " + QGroundControl.appSettingsDistanceUnitsString
+                        visible:    QGroundControl.gpsRtk.currentAltitude.value > 0
                         }
                     QGCLabel { text: qsTr("Satellites:") }
                     QGCLabel { text: QGroundControl.gpsRtk.numSatellites.value }

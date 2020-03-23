@@ -9,7 +9,7 @@
     "name":             "currentAccuracy",
     "shortDescription": "Current Survey-In Accuracy",
     "type":             "double",
-    "decimalPlaces":    1,
+    "decimalPlaces":    3,
     "units":            "m",
     "default":          null
 },
