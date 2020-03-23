@@ -34,6 +34,7 @@ public:
 
     Q_PROPERTY(double               altitudeRelative            READ altitudeRelative                                   NOTIFY altitudeRelativeChanged)
     Q_PROPERTY(double               altitudeAMSL                READ altitudeAMSL                                       NOTIFY altitudeAMSLChanged)
+    Q_PROPERTY(double               altitudeRaw                 READ altitudeRaw                                        NOTIFY altitudeRawChanged)
     Q_PROPERTY(bool                 ready                       READ ready                                              NOTIFY readyChanged)
     Q_PROPERTY(bool                 tracking                    READ tracking               WRITE  setTracking          NOTIFY trackingChanged)
     Q_PROPERTY(int                  points                      READ points                                             NOTIFY pointsChanged)
@@ -46,6 +47,7 @@ public:
 
     double                  altitudeRelative    () { return _altitudeRelative; }
     double                  altitudeAMSL        () { return _altitudeAMSL; }
+    double                  altitudeRaw         () { return _altitudeRaw; }
     bool                    tracking            () { return _tracking; }
     bool                    ready               () { return _ready; }
     int                     points              () { return _points; }
@@ -56,6 +58,7 @@ public:
 signals:
     void altitudeRelativeChanged    ();
     void altitudeAMSLChanged        ();
+    void altitudeRawChanged         ();
     void trackingChanged            ();
     void readyChanged               ();
     void pointsChanged              ();
@@ -63,6 +66,7 @@ signals:
 private slots:
     void _setActiveVehicle          (Vehicle* vehicle);
     void _altitudeRelativeChanged   (QVariant value);
+    void _mavlinkMessageReceived    (mavlink_message_t message);
     void _altitudeAMSLChanged       (QVariant value);
     void _trackingTime              ();
     void _vehicleCoordinateChanged  (QGeoCoordinate coordinate);
@@ -76,6 +80,7 @@ private:
     Vehicle*            _vehicle            = nullptr;
     double              _altitudeRelative   = 0;
     double              _altitudeAMSL       = 0;
+    double              _altitudeRaw        = 0;
     bool                _tracking           = false;
     bool                _ready              = false;
     int                 _points             = 0;

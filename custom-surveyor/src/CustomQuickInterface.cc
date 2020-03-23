@@ -102,6 +102,7 @@ CustomQuickInterface::_setActiveVehicle(Vehicle* vehicle)
         connect(altitudeRelative, &Fact::rawValueChanged, this, &CustomQuickInterface::_altitudeRelativeChanged);
         connect(altitudeAMSL,     &Fact::rawValueChanged, this, &CustomQuickInterface::_altitudeAMSLChanged);
         connect(_vehicle, &Vehicle::coordinateChanged, this, &CustomQuickInterface::_vehicleCoordinateChanged);
+        connect(_vehicle, &Vehicle::mavlinkMessageReceived, this, &CustomQuickInterface::_mavlinkMessageReceived);
         _trackTimer.start(1000);
     }
 }
@@ -125,6 +126,18 @@ CustomQuickInterface::_altitudeAMSLChanged(QVariant value)
     if(isfinite(a)) {
         _altitudeAMSL = (_altitudeAMSL * 0.95) + (value.toDouble() * 0.05);
         emit altitudeAMSLChanged();
+    }
+}
+
+//----------------------------------------------------------------------------------------
+void
+CustomQuickInterface::_mavlinkMessageReceived(mavlink_message_t message)
+{
+    if(message.msgid == MAVLINK_MSG_ID_GPS_RAW_INT) {
+        mavlink_gps_raw_int_t gpsRawInt;
+        mavlink_msg_gps_raw_int_decode(&message, &gpsRawInt);
+        _altitudeRaw = (_altitudeRaw * 0.95) + (gpsRawInt.alt / 1000.0 * 0.05);
+        emit altitudeRawChanged();
     }
 }
 
@@ -225,17 +238,17 @@ CustomQuickInterface::_vehicleCoordinateChanged(QGeoCoordinate coordinate)
             double distance = _lastPoint.distanceTo(coordinate);
             if (distance > DISTANCE_THRESHOLD) {
                 // Vehicle has moved far enough from previous point for an update
-                if (qIsNaN(_lastAltitude) || qAbs(_altitudeAMSL - _lastAltitude) > ALTITUDE_THRESHOLD) {
+                if (qIsNaN(_lastAltitude) || qAbs(_altitudeRaw - _lastAltitude) > ALTITUDE_THRESHOLD) {
                     // Vehicle has changed elevation far enough
-                    _lastAltitude = _altitudeAMSL;
+                    _lastAltitude = _altitudeRaw;
                     _lastPoint = coordinate;
-                    _addTracking(coordinate, _altitudeAMSL);
+                    _addTracking(coordinate, _altitudeRaw);
                 }
             }
         } else {
             // Add the very first trajectory point to the list
             _lastPoint = coordinate;
-            _addTracking(coordinate, _altitudeAMSL);
+            _addTracking(coordinate, _altitudeRaw);
         }
     }
 }
@@ -284,10 +297,10 @@ CustomQuickInterface::addWaypoint()
         if(!_waypointWriter) {
             _waypointWriter = new GPXWriter(this);
         }
-        GPXWayPoint* wp = new GPXWayPoint(QGeoCoordinate(_vehicle->coordinate().latitude(), _vehicle->coordinate().longitude(), _altitudeAMSL), _points, _altitudeRelative, this);
+        GPXWayPoint* wp = new GPXWayPoint(QGeoCoordinate(_vehicle->coordinate().latitude(), _vehicle->coordinate().longitude(), _altitudeRaw), _points, _altitudeRelative, this);
         wp->setGPSInfo(dynamic_cast<VehicleGPSFactGroup*>(_vehicle->gpsFactGroup()));
         _waypoints.append(wp);
-        _addTracking(_vehicle->coordinate(), _altitudeAMSL, true);
+        _addTracking(_vehicle->coordinate(), _altitudeRaw, true);
         _points++;
         _lastPoint = _vehicle->coordinate();
         emit pointsChanged();

@@ -28,6 +28,9 @@ Item {
     width:                  altRow.width
     anchors.top:            parent.top
     anchors.bottom:         parent.bottom
+
+    property double _spacer: ScreenTools.defaultFontPixelWidth * 2
+
     RowLayout {
         id:             altRow
         anchors.top:    parent.top
@@ -46,7 +49,7 @@ Item {
             color:                  qgcPal.text
             text:                   CustomQuickInterface.points
         }
-        Item { width: ScreenTools.defaultFontPixelWidth * 2; height: 1; }
+        Item { width: _spacer; height: 1; }
         QGCLabel {
             Layout.alignment:       Qt.AlignVCenter
             font.pointSize:         ScreenTools.mediumFontPointSize
@@ -60,7 +63,7 @@ Item {
             color:                  qgcPal.text
             text:                   CustomQuickInterface.altitudeRelative.toFixed(2) + (activeVehicle ? activeVehicle.altitudeRelative.units : "")
         }
-        Item { width: ScreenTools.defaultFontPixelWidth * 2; height: 1; }
+        Item { width: _spacer; height: 1; }
         QGCLabel {
             Layout.alignment:       Qt.AlignVCenter
             font.pointSize:         ScreenTools.mediumFontPointSize
@@ -73,6 +76,20 @@ Item {
             font.pointSize:         ScreenTools.largeFontPointSize
             color:                  qgcPal.text
             text:                   CustomQuickInterface.altitudeAMSL.toFixed(2) + (activeVehicle ? activeVehicle.altitudeAMSL.units : "")
+        }
+        Item { width: _spacer; height: 1; }
+        QGCLabel {
+            Layout.alignment:       Qt.AlignVCenter
+            font.pointSize:         ScreenTools.mediumFontPointSize
+            color:                  qgcPal.text
+            text:                   "RAW:"
+        }
+        QGCLabel {
+            Layout.minimumWidth:    ScreenTools.defaultFontPixelWidth * 8
+            Layout.alignment:       Qt.AlignVCenter
+            font.pointSize:         ScreenTools.largeFontPointSize
+            color:                  qgcPal.text
+            text:                   CustomQuickInterface.altitudeRaw.toFixed(2) + "m"
         }
     }
 }
